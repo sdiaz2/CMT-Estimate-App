@@ -47,6 +47,9 @@ export type ProjectTakeoff = {
   masonryElevatorShaftHeightFt?: number | null;
   masonryFtPerTripElevatorShaft?: number | null;
   masonryCmuEnclosureCount?: number | null;
+  groutBaseplatesInSpecialInspection?: boolean;
+  buildingPadSf?: number | null;
+  ft2PerTripGroutBaseplates?: number | null;
 };
 
 /**
@@ -1080,6 +1083,138 @@ export function isMasonryTestingParent(name: string): boolean {
   return name.toLowerCase().includes("masonry testing");
 }
 
+export const GROUT_HOURS_PER_TRIP = 4;
+
+export const DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES = 17000;
+
+export const HIGH_STRENGTH_GROUT_PARENT_NAME =
+  "High-Strength Grout Testing & Observations";
+
+/**
+ * Effective building pad SF: dedicated buildingPadSf when set (>0), else buildingAreaSf.
+ * Pad often equals building area.
+ */
+export function effectiveBuildingPadSf(
+  takeoff: ProjectTakeoff | null | undefined
+): number {
+  const pad = n(takeoff?.buildingPadSf, 0);
+  if (pad > 0) return pad;
+  return n(takeoff?.buildingAreaSf, 0);
+}
+
+export type GroutTripSuggestion = {
+  trips: number;
+  padSf: number;
+  ft2PerTrip: number;
+  baseplatesInSpecialInspection: boolean;
+  padSfSource: "buildingPadSf" | "buildingAreaSf" | "none";
+};
+
+/**
+ * High-Strength Grout Testing & Observations — trip rule:
+ *
+ * Only if grout baseplates are present in special inspection requirements:
+ *   trips = ceil(padSf / ft2PerTripGroutBaseplates) — default 17,000
+ *   padSf = buildingPadSf if set (>0), else buildingAreaSf
+ *
+ * Example: 100,000 SF pad + baseplates flag → ceil(100000/17000) = 6 trips.
+ */
+export function suggestGroutTrips(
+  takeoff: ProjectTakeoff | null | undefined
+): GroutTripSuggestion {
+  const baseplatesInSpecialInspection =
+    !!takeoff?.groutBaseplatesInSpecialInspection;
+  const dedicatedPad = n(takeoff?.buildingPadSf, 0);
+  const padSfSource: GroutTripSuggestion["padSfSource"] =
+    dedicatedPad > 0
+      ? "buildingPadSf"
+      : n(takeoff?.buildingAreaSf, 0) > 0
+        ? "buildingAreaSf"
+        : "none";
+  const padSf = effectiveBuildingPadSf(takeoff);
+  const ft2PerTrip =
+    n(takeoff?.ft2PerTripGroutBaseplates, 0) > 0
+      ? n(takeoff?.ft2PerTripGroutBaseplates)
+      : DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES;
+
+  const trips =
+    baseplatesInSpecialInspection && padSf > 0
+      ? ceilTrips(padSf, ft2PerTrip)
+      : 0;
+
+  return {
+    trips,
+    padSf,
+    ft2PerTrip,
+    baseplatesInSpecialInspection,
+    padSfSource,
+  };
+}
+
+export function hasGroutTakeoff(
+  takeoff: ProjectTakeoff | null | undefined
+): boolean {
+  return suggestGroutTrips(takeoff).trips > 0;
+}
+
+export function groutTripRuleLabel(
+  takeoff: ProjectTakeoff | null | undefined
+): string {
+  const suggestion = suggestGroutTrips(takeoff);
+  const sourceNote =
+    suggestion.padSfSource === "buildingPadSf"
+      ? "building pad SF"
+      : suggestion.padSfSource === "buildingAreaSf"
+        ? "building area SF (pad not set)"
+        : "pad/building SF";
+
+  if (!suggestion.baseplatesInSpecialInspection) {
+    return `High-Strength Grout: 1 trip / ${suggestion.ft2PerTrip.toLocaleString()} ft² of building pad — only when grout baseplates are in special inspection. Turn on the baseplates flag and enter pad SF (or building area) to suggest trips.`;
+  }
+  if (suggestion.padSf <= 0) {
+    return `High-Strength Grout: baseplates in special inspection (on). Enter building pad SF (or building area) — 1 trip / ${suggestion.ft2PerTrip.toLocaleString()} ft².`;
+  }
+  return `High-Strength Grout (baseplates in SI): 1 trip / ${suggestion.ft2PerTrip.toLocaleString()} ft² → ${suggestion.trips} trips from ${suggestion.padSf.toLocaleString()} ${sourceNote}.`;
+}
+
+export function applyGroutTakeoffToDrivers(
+  drivers: Drivers,
+  takeoff: ProjectTakeoff | null | undefined
+): Drivers {
+  const suggestion = suggestGroutTrips(takeoff);
+  if (suggestion.trips <= 0) return { ...drivers };
+
+  const trips = suggestion.trips;
+  const hours = trips * GROUT_HOURS_PER_TRIP;
+  const otHours = Math.round(hours * 0.15 * 10) / 10;
+  const source =
+    suggestion.padSfSource === "buildingPadSf"
+      ? "buildingPadSf"
+      : "buildingAreaSf";
+  const notesDefault = `From takeoff: grout baseplates in SI; ceil(${suggestion.padSf} / ${suggestion.ft2PerTrip}) ${source} = ${trips} trips`;
+
+  return {
+    ...drivers,
+    trips,
+    hours,
+    otHours,
+    days: trips,
+    vehicleTrips: trips,
+    notes:
+      typeof drivers.notes === "string" && drivers.notes.trim()
+        ? drivers.notes
+        : notesDefault,
+  };
+}
+
+export function isHighStrengthGroutParent(name: string): boolean {
+  const lower = name.toLowerCase();
+  return (
+    lower.includes("high-strength grout") ||
+    (lower.includes("grout") && lower.includes("testing"))
+  );
+}
+
 export function suggestFieldLines(
   parentName: string,
   drivers: Drivers,
@@ -1103,6 +1238,11 @@ export function suggestFieldLines(
     hasMasonryTakeoff(takeoff)
   ) {
     d = applyMasonryTakeoffToDrivers(drivers, takeoff);
+  } else if (
+    isHighStrengthGroutParent(parentName) &&
+    hasGroutTakeoff(takeoff)
+  ) {
+    d = applyGroutTakeoffToDrivers(drivers, takeoff);
   }
 
   const trips = n(d.trips, 0);
@@ -1304,7 +1444,8 @@ export function suggestLabLines(
 
 export function missCheckPrompts(
   selectedNames: string[],
-  catalog: { name: string; relatedHints: string[] }[]
+  catalog: { name: string; relatedHints: string[] }[],
+  takeoff?: ProjectTakeoff | null
 ): { parent: string; missing: string; message: string }[] {
   const selected = new Set(selectedNames);
   const prompts: { parent: string; missing: string; message: string }[] = [];
@@ -1321,6 +1462,20 @@ export function missCheckPrompts(
       }
     }
   }
+
+  // Takeoff flag on but High-Strength Grout parent not in scope
+  if (
+    takeoff?.groutBaseplatesInSpecialInspection &&
+    !selected.has(HIGH_STRENGTH_GROUT_PARENT_NAME) &&
+    ![...selected].some((n) => isHighStrengthGroutParent(n))
+  ) {
+    prompts.push({
+      parent: HIGH_STRENGTH_GROUT_PARENT_NAME,
+      missing: HIGH_STRENGTH_GROUT_PARENT_NAME,
+      message: `Grout baseplates are marked present in special inspection, but "${HIGH_STRENGTH_GROUT_PARENT_NAME}" is not in scope. Consider adding it.`,
+    });
+  }
+
   return prompts;
 }
 
@@ -1377,6 +1532,9 @@ export function takeoffFromProject(project: {
   masonryElevatorShaftHeightFt?: number | null;
   masonryFtPerTripElevatorShaft?: number | null;
   masonryCmuEnclosureCount?: number | null;
+  groutBaseplatesInSpecialInspection?: boolean;
+  buildingPadSf?: number | null;
+  ft2PerTripGroutBaseplates?: number | null;
 }): ProjectTakeoff {
   return {
     buildingAreaSf: project.buildingAreaSf ?? null,
@@ -1428,5 +1586,11 @@ export function takeoffFromProject(project: {
       project.masonryFtPerTripElevatorShaft ??
       DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
     masonryCmuEnclosureCount: project.masonryCmuEnclosureCount ?? null,
+    groutBaseplatesInSpecialInspection:
+      project.groutBaseplatesInSpecialInspection ?? false,
+    buildingPadSf: project.buildingPadSf ?? null,
+    ft2PerTripGroutBaseplates:
+      project.ft2PerTripGroutBaseplates ??
+      DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
   };
 }

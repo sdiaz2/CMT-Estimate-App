@@ -118,6 +118,10 @@ export default async function ProjectSetupPage({
               masonryFtPerTripElevatorShaft:
                 project.masonryFtPerTripElevatorShaft,
               masonryCmuEnclosureCount: project.masonryCmuEnclosureCount,
+              groutBaseplatesInSpecialInspection:
+                project.groutBaseplatesInSpecialInspection,
+              buildingPadSf: project.buildingPadSf,
+              ft2PerTripGroutBaseplates: project.ft2PerTripGroutBaseplates,
             }}
           />
         </div>

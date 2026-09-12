@@ -253,6 +253,35 @@ One trip for every 16 feet of elevator shaft CMU wall height, **for each buildin
 
 Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Masonry Testing parent.
 
+### High-Strength Grout Testing & Observations — trip suggestions
+
+Parent: **High-Strength Grout Testing & Observations**. Apply suggestions sets **Trips** and cascades High-Strength Grout Testing hours (~4 hr/trip) and Vehicle — same pattern as other field parents.
+
+**Rule — Grout baseplates in special inspection**
+
+One (1) trip for every 17,000 ft² of building pad, **only if** grout baseplates are present in special inspection requirements.
+
+| Input | Notes |
+|-------|--------|
+| Grout baseplates in special inspection | `groutBaseplatesInSpecialInspection` (boolean) — must be true for the rule to fire |
+| Building pad (SF) | `buildingPadSf` — often equals building area; if null/blank, falls back to `buildingAreaSf` |
+| ft² per trip | Editable; **default 17,000** (`ft2PerTripGroutBaseplates`) |
+
+**Formula:**
+
+```
+padSf = buildingPadSf > 0 ? buildingPadSf : buildingAreaSf
+trips = groutBaseplatesInSpecialInspection && padSf > 0
+  ? ceil(padSf / ft2PerTripGroutBaseplates)
+  : 0
+```
+
+**Example:** 100,000 SF pad + baseplates flag → ceil(100000 / 17000) = **6 trips**
+
+**Miss-check:** If the special-inspection baseplates flag is on but this parent is not in scope, a hint suggests adding it.
+
+Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the High-Strength Grout parent.
+
 ## Assumptions
 
 - Heuristic suggestions never lock numbers

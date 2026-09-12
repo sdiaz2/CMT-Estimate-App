@@ -7,8 +7,10 @@ import {
   applyConcreteTakeoffToDrivers,
   applyEarthworkTakeoffToDrivers,
   applyFoundationTakeoffToDrivers,
+  applyGroutTakeoffToDrivers,
   applyMasonryTakeoffToDrivers,
   DEFAULT_EARTHWORK_SF_PER_TRIP,
+  DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
   DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
   DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING,
   DEFAULT_PAVEMENT_LF_PER_TRIP,
@@ -26,10 +28,12 @@ import {
   hasConcreteTakeoff,
   hasEarthworkTakeoff,
   hasFoundationTakeoff,
+  hasGroutTakeoff,
   hasMasonryTakeoff,
   isCipDeepFoundationsParent,
   isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
+  isHighStrengthGroutParent,
   isMasonryTestingParent,
   missCheckPrompts,
   normalizePierType,
@@ -130,6 +134,11 @@ function takeoffDataFromForm(formData: FormData) {
   const masonryCmuEnclosureCountRaw = parseOptionalFloat(
     formData,
     "masonryCmuEnclosureCount"
+  );
+  const buildingPadSf = parseOptionalFloat(formData, "buildingPadSf");
+  const ft2PerTripGroutBaseplatesRaw = parseOptionalFloat(
+    formData,
+    "ft2PerTripGroutBaseplates"
   );
   return {
     buildingAreaSf,
@@ -235,6 +244,16 @@ function takeoffDataFromForm(formData: FormData) {
       masonryCmuEnclosureCountRaw !== null && masonryCmuEnclosureCountRaw > 0
         ? Math.floor(masonryCmuEnclosureCountRaw)
         : null,
+    groutBaseplatesInSpecialInspection: parseCheckbox(
+      formData,
+      "groutBaseplatesInSpecialInspection"
+    ),
+    buildingPadSf,
+    ft2PerTripGroutBaseplates:
+      ft2PerTripGroutBaseplatesRaw !== null &&
+      ft2PerTripGroutBaseplatesRaw > 0
+        ? ft2PerTripGroutBaseplatesRaw
+        : DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
   };
 }
 
@@ -411,6 +430,15 @@ export async function applyFieldSuggestions(projectId: string, parentId: string)
       where: { id: parentId },
       data: { drivers: JSON.stringify(drivers) },
     });
+  } else if (
+    isHighStrengthGroutParent(parent.catalog.name) &&
+    hasGroutTakeoff(takeoff)
+  ) {
+    drivers = applyGroutTakeoffToDrivers(drivers, takeoff);
+    await prisma.projectParent.update({
+      where: { id: parentId },
+      data: { drivers: JSON.stringify(drivers) },
+    });
   }
 
   const suggestions = suggestFieldLines(parent.catalog.name, drivers, takeoff);
@@ -478,6 +506,15 @@ export async function applyAllFieldSuggestions(projectId: string) {
       hasMasonryTakeoff(takeoff)
     ) {
       drivers = applyMasonryTakeoffToDrivers(drivers, takeoff);
+      await prisma.projectParent.update({
+        where: { id: parent.id },
+        data: { drivers: JSON.stringify(drivers) },
+      });
+    } else if (
+      isHighStrengthGroutParent(parent.catalog.name) &&
+      hasGroutTakeoff(takeoff)
+    ) {
+      drivers = applyGroutTakeoffToDrivers(drivers, takeoff);
       await prisma.projectParent.update({
         where: { id: parent.id },
         data: { drivers: JSON.stringify(drivers) },
@@ -604,6 +641,9 @@ export async function applyLabSuggestions(projectId: string) {
 }
 
 export async function getMissChecks(projectId: string) {
+  const project = await prisma.project.findUniqueOrThrow({
+    where: { id: projectId },
+  });
   const parents = await prisma.projectParent.findMany({
     where: { projectId },
     include: { catalog: true },
@@ -614,6 +654,7 @@ export async function getMissChecks(projectId: string) {
     catalog.map((c) => ({
       name: c.name,
       relatedHints: parseHints(c.relatedHints),
-    }))
+    })),
+    takeoffFromProject(project)
   );
 }

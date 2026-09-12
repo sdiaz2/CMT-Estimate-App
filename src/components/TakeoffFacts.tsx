@@ -10,6 +10,7 @@ import {
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
   DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
+  DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
   DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
   DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING,
   DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
@@ -21,6 +22,7 @@ import {
   suggestConcreteTrips,
   suggestEarthworkTrips,
   suggestFoundationTrips,
+  suggestGroutTrips,
   suggestMasonryTrips,
   type PierType,
 } from "@/lib/heuristics";
@@ -64,6 +66,9 @@ export type TakeoffFactsValues = {
   masonryElevatorShaftHeightFt?: number | null;
   masonryFtPerTripElevatorShaft?: number | null;
   masonryCmuEnclosureCount?: number | null;
+  groutBaseplatesInSpecialInspection?: boolean;
+  buildingPadSf?: number | null;
+  ft2PerTripGroutBaseplates?: number | null;
 };
 
 /** Shared Takeoff / Project facts fields (used inside a parent <form>). */
@@ -137,6 +142,11 @@ export function TakeoffFactsFields({
     values.masonryFtPerTripElevatorShaft > 0
       ? values.masonryFtPerTripElevatorShaft
       : DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT;
+  const groutFt2Divisor =
+    values?.ft2PerTripGroutBaseplates &&
+    values.ft2PerTripGroutBaseplates > 0
+      ? values.ft2PerTripGroutBaseplates
+      : DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES;
   const limeTreated = !!values?.limeTreatedPavementSubgrade;
   const sidewalksBunched = !!values?.sidewalksBunchedTogether;
 
@@ -206,6 +216,15 @@ export function TakeoffFactsFields({
   const showElevatorShaft =
     (elevatorBuildingCount ?? 0) > 0 && (elevatorShaftHeightFt ?? 0) > 0;
   const showEnclosure = (cmuEnclosureCount ?? 0) > 0;
+  const groutSuggestion = suggestGroutTrips({
+    groutBaseplatesInSpecialInspection:
+      values?.groutBaseplatesInSpecialInspection,
+    buildingPadSf: values?.buildingPadSf,
+    buildingAreaSf: values?.buildingAreaSf,
+    ft2PerTripGroutBaseplates: groutFt2Divisor,
+  });
+  const showGrout = groutSuggestion.trips > 0;
+  const groutBaseplates = !!values?.groutBaseplatesInSpecialInspection;
   const showBuilding = (buildingSf ?? 0) > 0;
   const showPavement =
     limeTreated ? (pavementSf ?? 0) > 0 : (pavementLf ?? 0) > 0;
@@ -240,8 +259,11 @@ export function TakeoffFactsFields({
           <strong>{DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING.toLocaleString()}</strong>{" "}
           SF/trip; elevator shaft{" "}
           <strong>{DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT}</strong> ft/trip ×
-          buildings; enclosures 1 trip each. Suggestions never lock — edit freely
-          after Apply.
+          buildings; enclosures 1 trip each. High-Strength Grout: 1 trip /{" "}
+          <strong>{DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES.toLocaleString()}</strong>{" "}
+          ft² building pad when baseplates are in special inspection (pad falls
+          back to building area). Suggestions never lock — edit freely after
+          Apply.
         </p>
       </div>
 
@@ -1089,6 +1111,81 @@ export function TakeoffFactsFields({
                 .filter((x) => x != null)
                 .join(" + ")}{" "}
               = {masonrySuggestion.total} trips
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-slate-200 pt-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          High-Strength Grout Testing &amp; Observations
+        </p>
+        <p className="mb-3 text-xs text-slate-500">
+          One (1) trip for every{" "}
+          <strong>{DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES.toLocaleString()}</strong>{" "}
+          ft² of building pad, <em>only if</em> grout baseplates are present in
+          special inspection requirements. Building pad SF often equals building
+          area — if pad is blank, building area is used.
+        </p>
+        <label className="mb-3 inline-flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            name="groutBaseplatesInSpecialInspection"
+            value="true"
+            defaultChecked={groutBaseplates}
+            className="rounded border-slate-300"
+          />
+          Grout baseplates in special inspection requirements
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Building pad (SF)
+            </span>
+            <input
+              name="buildingPadSf"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.buildingPadSf != null && values.buildingPadSf > 0
+                  ? String(values.buildingPadSf)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 100000 — blank uses building area"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              often equals building area; falls back to building area when blank
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              ft² per trip (grout baseplates)
+            </span>
+            <input
+              name="ft2PerTripGroutBaseplates"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(groutFt2Divisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 17,000
+            </span>
+          </label>
+        </div>
+        {showGrout && (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            <p>
+              Grout baseplates: ceil(
+              {groutSuggestion.padSf.toLocaleString()} /{" "}
+              {groutSuggestion.ft2PerTrip.toLocaleString()}) ={" "}
+              <strong>{groutSuggestion.trips} trips</strong>
+              {groutSuggestion.padSfSource === "buildingAreaSf"
+                ? " (using building area)"
+                : ""}
             </p>
           </div>
         )}

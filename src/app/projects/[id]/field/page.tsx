@@ -22,6 +22,7 @@ import {
   DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
+  DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
   DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
   DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING,
   DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
@@ -33,19 +34,23 @@ import {
   concreteTripRuleLabels,
   earthworkTripRuleLabels,
   foundationTripRuleLabel,
+  groutTripRuleLabel,
   hasConcreteTakeoff,
   hasEarthworkTakeoff,
   hasFoundationTakeoff,
+  hasGroutTakeoff,
   hasMasonryTakeoff,
   isCipDeepFoundationsParent,
   isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
+  isHighStrengthGroutParent,
   isMasonryTestingParent,
   masonryTripRuleLabels,
   parseDrivers,
   suggestConcreteTrips,
   suggestEarthworkTrips,
   suggestFoundationTrips,
+  suggestGroutTrips,
   suggestMasonryTrips,
   takeoffFromProject,
 } from "@/lib/heuristics";
@@ -94,6 +99,9 @@ export default async function FieldPage({
   const masonrySuggestion = suggestMasonryTrips(takeoff);
   const masonryLabels = masonryTripRuleLabels(takeoff);
   const masonryTakeoffApplies = hasMasonryTakeoff(takeoff);
+  const groutSuggestion = suggestGroutTrips(takeoff);
+  const groutLabel = groutTripRuleLabel(takeoff);
+  const groutTakeoffApplies = hasGroutTakeoff(takeoff);
   const buildingSf = takeoff.buildingAreaSf ?? 0;
   const pavementSf = takeoff.pavementAreaSf ?? 0;
   const pavementLf = takeoff.pavementSubgradeLf ?? 0;
@@ -113,6 +121,9 @@ export default async function FieldPage({
   );
   const hasMasonryTesting = fieldParents.some((p) =>
     isMasonryTestingParent(p.catalog.name)
+  );
+  const hasGroutTesting = fieldParents.some((p) =>
+    isHighStrengthGroutParent(p.catalog.name)
   );
   const takeoffApplies = hasEarthworkTakeoff(takeoff);
 
@@ -196,6 +207,10 @@ export default async function FieldPage({
               masonryFtPerTripElevatorShaft:
                 project.masonryFtPerTripElevatorShaft,
               masonryCmuEnclosureCount: project.masonryCmuEnclosureCount,
+              groutBaseplatesInSpecialInspection:
+                project.groutBaseplatesInSpecialInspection,
+              buildingPadSf: project.buildingPadSf,
+              ft2PerTripGroutBaseplates: project.ft2PerTripGroutBaseplates,
             }}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -259,6 +274,15 @@ export default async function FieldPage({
                   : ""}
               </p>
             )}
+            {groutTakeoffApplies && (
+              <p className="text-xs text-slate-600">
+                Grout preview:{" "}
+                <strong>{groutSuggestion.trips} trips</strong>
+                {groutSuggestion.padSfSource === "buildingAreaSf"
+                  ? " (pad from building area)"
+                  : " (from building pad)"}
+              </p>
+            )}
           </div>
         </form>
       </section>
@@ -281,6 +305,7 @@ export default async function FieldPage({
               parent.catalog.name
             );
             const isMasonry = isMasonryTestingParent(parent.catalog.name);
+            const isGrout = isHighStrengthGroutParent(parent.catalog.name);
             const displayDrivers =
               isEarthwork && takeoffApplies && n(drivers.trips) === 0
                 ? { ...drivers, trips: suggestion.total }
@@ -296,7 +321,11 @@ export default async function FieldPage({
                         masonryTakeoffApplies &&
                         n(drivers.trips) === 0
                       ? { ...drivers, trips: masonrySuggestion.total }
-                      : drivers;
+                      : isGrout &&
+                          groutTakeoffApplies &&
+                          n(drivers.trips) === 0
+                        ? { ...drivers, trips: groutSuggestion.trips }
+                        : drivers;
 
             return (
               <section
@@ -482,6 +511,21 @@ export default async function FieldPage({
                   </div>
                 )}
 
+                {isGrout && (
+                  <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <p className="font-medium">{groutLabel}</p>
+                    <p className="mt-1 text-xs text-amber-900/80">
+                      One (1) trip for every{" "}
+                      {DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES.toLocaleString()}{" "}
+                      ft² of building pad, only if grout baseplates are present
+                      in special inspection. Pad SF falls back to building area
+                      when blank. Apply suggestions sets Trips and cascades
+                      High-Strength Grout Testing hours (~4 hr/trip) and Vehicle.
+                      Numbers stay editable.
+                    </p>
+                  </div>
+                )}
+
                 <form
                   action={updateParentDrivers.bind(null, id, parent.id)}
                   className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8"
@@ -566,6 +610,15 @@ export default async function FieldPage({
           SF/trip), multifamily elevator building count + shaft height ft/building
           (default {DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT} ft/trip), and/or
           CMU enclosure count (1 trip each). Total = A + B + C.
+        </p>
+      )}
+
+      {hasGroutTesting && !groutTakeoffApplies && (
+        <p className="mt-4 text-xs text-slate-500">
+          Tip: for High-Strength Grout Testing &amp; Observations, turn on
+          &quot;grout baseplates in special inspection&quot; and enter building
+          pad SF (or rely on building area). Default{" "}
+          {DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES.toLocaleString()} ft²/trip.
         </p>
       )}
     </div>

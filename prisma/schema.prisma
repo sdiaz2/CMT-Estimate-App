@@ -113,6 +113,12 @@ model Project {
   masonryFtPerTripElevatorShaft Float @default(16)
   /// Dumpster and/or equipment CMU enclosure count (Masonry rule C; 1 trip each)
   masonryCmuEnclosureCount    Int?
+  /// Grout baseplates present in special inspection requirements (High-Strength Grout trip rule)
+  groutBaseplatesInSpecialInspection Boolean @default(false)
+  /// Building pad area (SF) for High-Strength Grout trips; often equals building area — if null, fall back to buildingAreaSf
+  buildingPadSf               Float?
+  /// SF of building pad per High-Strength Grout trip when baseplates are in special inspection (default 17000)
+  ft2PerTripGroutBaseplates   Float    @default(17000)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
   parents                     ProjectParent[]

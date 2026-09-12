@@ -127,6 +127,9 @@ export default async function ProjectSetupPage({
               structuralSteelFinalInspectionTrips:
                 project.structuralSteelFinalInspectionTrips,
               structureLevelCount: project.structureLevelCount,
+              slabOnGradePourCount: project.slabOnGradePourCount,
+              floorFlatnessSf: project.floorFlatnessSf,
+              ft2PerTripFloorFlatness: project.ft2PerTripFloorFlatness,
             }}
           />
         </div>

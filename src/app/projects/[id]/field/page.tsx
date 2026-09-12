@@ -28,6 +28,7 @@ import {
   DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS,
   DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP,
   DEFAULT_STRUCTURE_LEVEL_COUNT,
+  DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS,
   DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
   DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
   DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
@@ -44,13 +45,16 @@ import {
   hasGroutTakeoff,
   hasMasonryTakeoff,
   hasStructuralSteelTakeoff,
+  hasFloorFlatnessTakeoff,
   isCipDeepFoundationsParent,
   isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
   isHighStrengthGroutParent,
   isMasonryTestingParent,
   isStructuralSteelParent,
+  isFloorFlatnessParent,
   masonryTripRuleLabels,
+  floorFlatnessTripRuleLabel,
   parseDrivers,
   suggestConcreteTrips,
   suggestEarthworkTrips,
@@ -58,6 +62,7 @@ import {
   suggestGroutTrips,
   suggestMasonryTrips,
   suggestStructuralSteelTrips,
+  suggestFloorFlatnessTrips,
   structuralSteelTripRuleLabel,
   takeoffFromProject,
 } from "@/lib/heuristics";
@@ -112,6 +117,9 @@ export default async function FieldPage({
   const steelSuggestion = suggestStructuralSteelTrips(takeoff);
   const steelLabel = structuralSteelTripRuleLabel(takeoff);
   const steelTakeoffApplies = hasStructuralSteelTakeoff(takeoff);
+  const floorFlatnessSuggestion = suggestFloorFlatnessTrips(takeoff);
+  const floorFlatnessLabel = floorFlatnessTripRuleLabel(takeoff);
+  const floorFlatnessTakeoffApplies = hasFloorFlatnessTakeoff(takeoff);
   const buildingSf = takeoff.buildingAreaSf ?? 0;
   const pavementSf = takeoff.pavementAreaSf ?? 0;
   const pavementLf = takeoff.pavementSubgradeLf ?? 0;
@@ -137,6 +145,9 @@ export default async function FieldPage({
   );
   const hasStructuralSteel = fieldParents.some((p) =>
     isStructuralSteelParent(p.catalog.name)
+  );
+  const hasFloorFlatness = fieldParents.some((p) =>
+    isFloorFlatnessParent(p.catalog.name)
   );
   const takeoffApplies = hasEarthworkTakeoff(takeoff);
 
@@ -229,6 +240,9 @@ export default async function FieldPage({
               structuralSteelFinalInspectionTrips:
                 project.structuralSteelFinalInspectionTrips,
               structureLevelCount: project.structureLevelCount,
+              slabOnGradePourCount: project.slabOnGradePourCount,
+              floorFlatnessSf: project.floorFlatnessSf,
+              ft2PerTripFloorFlatness: project.ft2PerTripFloorFlatness,
             }}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -312,6 +326,17 @@ export default async function FieldPage({
                   : ""})
               </p>
             )}
+            {floorFlatnessTakeoffApplies && (
+              <p className="text-xs text-slate-600">
+                Floor Flatness preview:{" "}
+                <strong>{floorFlatnessSuggestion.trips} trips</strong> (pours:{" "}
+                {floorFlatnessSuggestion.pourTrips} | SF rule:{" "}
+                {floorFlatnessSuggestion.sfTrips} → max)
+                {floorFlatnessSuggestion.sfSource === "buildingAreaSf"
+                  ? " (SF from building area)"
+                  : ""}
+              </p>
+            )}
           </div>
         </form>
       </section>
@@ -336,6 +361,7 @@ export default async function FieldPage({
             const isMasonry = isMasonryTestingParent(parent.catalog.name);
             const isGrout = isHighStrengthGroutParent(parent.catalog.name);
             const isSteel = isStructuralSteelParent(parent.catalog.name);
+            const isFloorFlatness = isFloorFlatnessParent(parent.catalog.name);
             const displayDrivers =
               isEarthwork && takeoffApplies && n(drivers.trips) === 0
                 ? { ...drivers, trips: suggestion.total }
@@ -359,7 +385,14 @@ export default async function FieldPage({
                             steelTakeoffApplies &&
                             n(drivers.trips) === 0
                           ? { ...drivers, trips: steelSuggestion.trips }
-                          : drivers;
+                          : isFloorFlatness &&
+                              floorFlatnessTakeoffApplies &&
+                              n(drivers.trips) === 0
+                            ? {
+                                ...drivers,
+                                trips: floorFlatnessSuggestion.trips,
+                              }
+                            : drivers;
 
             return (
               <section
@@ -583,6 +616,26 @@ export default async function FieldPage({
                   </div>
                 )}
 
+                {isFloorFlatness && (
+                  <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <p className="font-medium">{floorFlatnessLabel}</p>
+                    {floorFlatnessTakeoffApplies && (
+                      <p className="mt-1 text-sm">
+                        pours: {floorFlatnessSuggestion.pourTrips} | SF rule:{" "}
+                        {floorFlatnessSuggestion.sfTrips} → using max{" "}
+                        <strong>{floorFlatnessSuggestion.trips}</strong>
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-amber-900/80">
+                      One (1) trip per slab-on-grade pour or 1 trip /{" "}
+                      {DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS.toLocaleString()}{" "}
+                      ft² — use max of both. Floor flatness SF falls back to
+                      building area. Apply suggestions sets Trips and cascades
+                      hours (~4 hr/trip) and Vehicle. Numbers stay editable.
+                    </p>
+                  </div>
+                )}
+
                 <form
                   action={updateParentDrivers.bind(null, id, parent.id)}
                   className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8"
@@ -687,6 +740,15 @@ export default async function FieldPage({
           {DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP.toLocaleString()} SF/trip +{" "}
           {DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS} final; total = levels ×
           per-level trips.
+        </p>
+      )}
+
+      {hasFloorFlatness && !floorFlatnessTakeoffApplies && (
+        <p className="mt-4 text-xs text-slate-500">
+          Tip: for Floor Flatness Testing &amp; Observations, enter slab-on-grade
+          pour count and/or floor flatness SF (falls back to building area).
+          Suggested trips = max(pours, ceil(SF /{" "}
+          {DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS.toLocaleString()})).
         </p>
       )}
     </div>

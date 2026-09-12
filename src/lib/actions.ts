@@ -10,8 +10,10 @@ import {
   applyGroutTakeoffToDrivers,
   applyMasonryTakeoffToDrivers,
   applyStructuralSteelTakeoffToDrivers,
+  applyFloorFlatnessTakeoffToDrivers,
   DEFAULT_EARTHWORK_SF_PER_TRIP,
   DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
+  DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS,
   DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS,
   DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP,
   DEFAULT_STRUCTURE_LEVEL_COUNT,
@@ -35,12 +37,14 @@ import {
   hasGroutTakeoff,
   hasMasonryTakeoff,
   hasStructuralSteelTakeoff,
+  hasFloorFlatnessTakeoff,
   isCipDeepFoundationsParent,
   isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
   isHighStrengthGroutParent,
   isMasonryTestingParent,
   isStructuralSteelParent,
+  isFloorFlatnessParent,
   missCheckPrompts,
   normalizePierType,
   parseDrivers,
@@ -161,6 +165,15 @@ function takeoffDataFromForm(formData: FormData) {
   const structureLevelCountRaw = parseOptionalFloat(
     formData,
     "structureLevelCount"
+  );
+  const slabOnGradePourCountRaw = parseOptionalFloat(
+    formData,
+    "slabOnGradePourCount"
+  );
+  const floorFlatnessSf = parseOptionalFloat(formData, "floorFlatnessSf");
+  const ft2PerTripFloorFlatnessRaw = parseOptionalFloat(
+    formData,
+    "ft2PerTripFloorFlatness"
   );
   return {
     buildingAreaSf,
@@ -291,6 +304,15 @@ function takeoffDataFromForm(formData: FormData) {
       structureLevelCountRaw !== null && structureLevelCountRaw >= 1
         ? Math.floor(structureLevelCountRaw)
         : DEFAULT_STRUCTURE_LEVEL_COUNT,
+    slabOnGradePourCount:
+      slabOnGradePourCountRaw !== null && slabOnGradePourCountRaw > 0
+        ? Math.floor(slabOnGradePourCountRaw)
+        : null,
+    floorFlatnessSf,
+    ft2PerTripFloorFlatness:
+      ft2PerTripFloorFlatnessRaw !== null && ft2PerTripFloorFlatnessRaw > 0
+        ? ft2PerTripFloorFlatnessRaw
+        : DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS,
   };
 }
 
@@ -485,6 +507,15 @@ export async function applyFieldSuggestions(projectId: string, parentId: string)
       where: { id: parentId },
       data: { drivers: JSON.stringify(drivers) },
     });
+  } else if (
+    isFloorFlatnessParent(parent.catalog.name) &&
+    hasFloorFlatnessTakeoff(takeoff)
+  ) {
+    drivers = applyFloorFlatnessTakeoffToDrivers(drivers, takeoff);
+    await prisma.projectParent.update({
+      where: { id: parentId },
+      data: { drivers: JSON.stringify(drivers) },
+    });
   }
 
   const suggestions = suggestFieldLines(parent.catalog.name, drivers, takeoff);
@@ -570,6 +601,15 @@ export async function applyAllFieldSuggestions(projectId: string) {
       hasStructuralSteelTakeoff(takeoff)
     ) {
       drivers = applyStructuralSteelTakeoffToDrivers(drivers, takeoff);
+      await prisma.projectParent.update({
+        where: { id: parent.id },
+        data: { drivers: JSON.stringify(drivers) },
+      });
+    } else if (
+      isFloorFlatnessParent(parent.catalog.name) &&
+      hasFloorFlatnessTakeoff(takeoff)
+    ) {
+      drivers = applyFloorFlatnessTakeoffToDrivers(drivers, takeoff);
       await prisma.projectParent.update({
         where: { id: parent.id },
         data: { drivers: JSON.stringify(drivers) },

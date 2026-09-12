@@ -317,6 +317,41 @@ Amber UI shows: `{levels} levels × (ceil(SF/20000)+1 final)`.
 
 Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Structural Steel Inspections parent.
 
+
+### Floor Flatness Testing & Observations — trip suggestions
+
+Parent: **Floor Flatness Testing & Observations** (seed catalog; legacy match also accepts `Floor-Flatness Testing`). Apply suggestions sets **Trips** and cascades hours (~4 hr/trip) and Vehicle — only when this parent is in project scope.
+
+**Rule — max(pours, SF)**
+
+One (1) trip per building slab-on-grade pour **or** one (1) trip per 30,000 ft². Suggested trips = **max** of the two bases so neither under-counts.
+
+| Input | Notes |
+|-------|--------|
+| Slab-on-grade pour count | `slabOnGradePourCount` — Int; 1 trip per pour when &gt; 0 |
+| Floor flatness / building slab (SF) | `floorFlatnessSf` — if null/blank, falls back to `buildingAreaSf` |
+| ft² per trip | Editable; **default 30,000** (`ft2PerTripFloorFlatness`) |
+
+**Formula:**
+
+```
+pourTrips = slabOnGradePourCount > 0 ? slabOnGradePourCount : 0
+sf = floorFlatnessSf > 0 ? floorFlatnessSf : buildingAreaSf
+sfTrips = sf > 0 ? ceil(sf / ft2PerTripFloorFlatness) : 0
+trips = max(pourTrips, sfTrips)
+```
+
+If only one input is present, that one is used.
+
+**Examples:**
+- 2 pours, 50,000 SF → max(2, 2) = **2**
+- 2 pours, 100,000 SF → max(2, 4) = **4**
+- 0 pours, 25,000 SF → max(0, 1) = **1**
+
+Amber UI shows: `pours: X | SF rule: Y → using max Z`.
+
+Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Floor Flatness parent.
+
 ## Assumptions
 
 - Heuristic suggestions never lock numbers

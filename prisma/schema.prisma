@@ -127,6 +127,12 @@ model Project {
   structuralSteelFinalInspectionTrips Float @default(1)
   /// Number of structure levels — steel trips are multiplied by this (default 1, min 1)
   structureLevelCount         Int      @default(1)
+  /// Building slab-on-grade pour count for Floor Flatness Testing trip rule
+  slabOnGradePourCount        Int?
+  /// Floor flatness / building slab area (SF); if null, fall back to buildingAreaSf
+  floorFlatnessSf             Float?
+  /// SF per Floor Flatness trip (default 30000)
+  ft2PerTripFloorFlatness     Float    @default(30000)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
   parents                     ProjectParent[]

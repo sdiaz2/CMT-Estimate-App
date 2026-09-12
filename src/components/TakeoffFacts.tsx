@@ -16,6 +16,7 @@ import {
   DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS,
   DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP,
   DEFAULT_STRUCTURE_LEVEL_COUNT,
+  DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS,
   DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
   DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT,
   MIN_TRIPS_BUILDING_SLAB,
@@ -28,6 +29,7 @@ import {
   suggestGroutTrips,
   suggestMasonryTrips,
   suggestStructuralSteelTrips,
+  suggestFloorFlatnessTrips,
   type PierType,
 } from "@/lib/heuristics";
 
@@ -77,6 +79,9 @@ export type TakeoffFactsValues = {
   structuralSteelSfPerTrip?: number | null;
   structuralSteelFinalInspectionTrips?: number | null;
   structureLevelCount?: number | null;
+  slabOnGradePourCount?: number | null;
+  floorFlatnessSf?: number | null;
+  ft2PerTripFloorFlatness?: number | null;
 };
 
 /** Shared Takeoff / Project facts fields (used inside a parent <form>). */
@@ -168,6 +173,10 @@ export function TakeoffFactsFields({
     values?.structureLevelCount != null && values.structureLevelCount >= 1
       ? Math.floor(values.structureLevelCount)
       : DEFAULT_STRUCTURE_LEVEL_COUNT;
+  const floorFlatnessFt2Divisor =
+    values?.ft2PerTripFloorFlatness && values.ft2PerTripFloorFlatness > 0
+      ? values.ft2PerTripFloorFlatness
+      : DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS;
   const limeTreated = !!values?.limeTreatedPavementSubgrade;
   const sidewalksBunched = !!values?.sidewalksBunchedTogether;
 
@@ -254,6 +263,13 @@ export function TakeoffFactsFields({
     structureLevelCount,
   });
   const showSteel = steelSuggestion.trips > 0;
+  const floorFlatnessSuggestion = suggestFloorFlatnessTrips({
+    slabOnGradePourCount: values?.slabOnGradePourCount,
+    floorFlatnessSf: values?.floorFlatnessSf,
+    buildingAreaSf: values?.buildingAreaSf,
+    ft2PerTripFloorFlatness: floorFlatnessFt2Divisor,
+  });
+  const showFloorFlatness = floorFlatnessSuggestion.trips > 0;
   const showBuilding = (buildingSf ?? 0) > 0;
   const showPavement =
     limeTreated ? (pavementSf ?? 0) > 0 : (pavementLf ?? 0) > 0;
@@ -297,8 +313,13 @@ export function TakeoffFactsFields({
           </strong>{" "}
           ft² +{" "}
           <strong>{DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS}</strong>{" "}
-          final × structure levels (steel SF falls back to building area).
-          Suggestions never lock — edit freely after Apply.
+          final × structure levels (steel SF falls back to building area). Floor
+          Flatness: max(1 trip per slab-on-grade pour, 1 trip /{" "}
+          <strong>
+            {DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS.toLocaleString()}
+          </strong>{" "}
+          ft²; SF falls back to building area). Suggestions never lock — edit
+          freely after Apply.
         </p>
       </div>
 
@@ -1332,6 +1353,102 @@ export function TakeoffFactsFields({
             <p className="mt-1 text-xs text-amber-900/80">
               Applied only to Structural Steel Inspections when that parent is in
               scope.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          Floor Flatness Testing &amp; Observations
+        </p>
+        <p className="mb-3 text-xs text-slate-500">
+          One (1) trip per building slab-on-grade pour{" "}
+          <em>or</em> one (1) trip per{" "}
+          <strong>
+            {DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS.toLocaleString()}
+          </strong>{" "}
+          ft² — suggested trips ={" "}
+          <strong>max(pour trips, SF trips)</strong>. Applied only when this
+          parent is in scope. Floor flatness SF falls back to building area
+          (building slab SF) when blank.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Slab-on-grade pour count
+            </span>
+            <input
+              name="slabOnGradePourCount"
+              type="number"
+              step="1"
+              min="0"
+              defaultValue={
+                values?.slabOnGradePourCount != null &&
+                values.slabOnGradePourCount > 0
+                  ? String(values.slabOnGradePourCount)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 2"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              1 trip per pour
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Floor flatness / building slab (SF)
+            </span>
+            <input
+              name="floorFlatnessSf"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.floorFlatnessSf != null && values.floorFlatnessSf > 0
+                  ? String(values.floorFlatnessSf)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="blank uses building area"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              falls back to building area when blank
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              ft² per trip (floor flatness)
+            </span>
+            <input
+              name="ft2PerTripFloorFlatness"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(floorFlatnessFt2Divisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 30,000
+            </span>
+          </label>
+        </div>
+        {showFloorFlatness && (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            <p>
+              pours: {floorFlatnessSuggestion.pourTrips} | SF rule:{" "}
+              {floorFlatnessSuggestion.sfTrips} → using max{" "}
+              <strong>{floorFlatnessSuggestion.trips}</strong>
+              {floorFlatnessSuggestion.sfSource === "buildingAreaSf"
+                ? " (SF from building area)"
+                : floorFlatnessSuggestion.sf > 0
+                  ? ` (${floorFlatnessSuggestion.sf.toLocaleString()} / ${floorFlatnessSuggestion.ft2PerTrip.toLocaleString()})`
+                  : ""}
+            </p>
+            <p className="mt-1 text-xs text-amber-900/80">
+              Applied only to Floor Flatness Testing &amp; Observations when that
+              parent is in scope.
             </p>
           </div>
         )}

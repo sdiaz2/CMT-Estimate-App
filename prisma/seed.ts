@@ -145,13 +145,13 @@ const catalog: CatalogSeed[] = [
     ],
   },
   {
-    name: "Floor-Flatness Testing",
+    name: "Floor Flatness Testing & Observations",
     sortOrder: 12,
     category: "field",
     relatedHints: [],
     defaultDrivers: { trips: 2, hours: 16, days: 2, vehicleTrips: 2 },
     templates: [
-      { description: "Floor-Flatness Testing", units: "hours", qtyHint: "hours", sortOrder: 1 },
+      { description: "Floor Flatness Testing & Observations", units: "hours", qtyHint: "hours", sortOrder: 1 },
       { description: "Vehicle Charge", units: "each", includesVehicle: true, qtyHint: "vehicleTrips", sortOrder: 2 },
     ],
   },

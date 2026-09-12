@@ -54,6 +54,9 @@ export type ProjectTakeoff = {
   structuralSteelSfPerTrip?: number | null;
   structuralSteelFinalInspectionTrips?: number | null;
   structureLevelCount?: number | null;
+  slabOnGradePourCount?: number | null;
+  floorFlatnessSf?: number | null;
+  ft2PerTripFloorFlatness?: number | null;
 };
 
 /**
@@ -1380,6 +1383,152 @@ export function isStructuralSteelParent(name: string): boolean {
   );
 }
 
+export const FLOOR_FLATNESS_HOURS_PER_TRIP = 4;
+
+export const DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS = 30000;
+
+/**
+ * Effective floor flatness SF: dedicated floorFlatnessSf when set (>0),
+ * else buildingAreaSf (building slab SF proxy).
+ */
+export function effectiveFloorFlatnessSf(
+  takeoff: ProjectTakeoff | null | undefined
+): number {
+  const dedicated = n(takeoff?.floorFlatnessSf, 0);
+  if (dedicated > 0) return dedicated;
+  return n(takeoff?.buildingAreaSf, 0);
+}
+
+export type FloorFlatnessTripSuggestion = {
+  trips: number;
+  pourTrips: number;
+  sfTrips: number;
+  pourCount: number;
+  sf: number;
+  ft2PerTrip: number;
+  sfSource: "floorFlatnessSf" | "buildingAreaSf" | "none";
+};
+
+/**
+ * Floor Flatness Testing & Observations — trip rule (only when parent in scope):
+ *
+ * One (1) trip per building slab-on-grade pour OR one (1) trip per 30,000 ft².
+ * Suggested trips = max(pourTrips, sfTrips) so both bases are honored.
+ *
+ *   pourTrips = slabOnGradePourCount when > 0, else 0
+ *   sf = floorFlatnessSf > 0 ? floorFlatnessSf : buildingAreaSf
+ *   sfTrips = sf > 0 ? ceil(sf / ft2PerTripFloorFlatness) : 0
+ *   trips = max(pourTrips, sfTrips)
+ *
+ * If only one input is present, that one is used (max with 0).
+ * Wired ONLY to parent Floor-Flatness Testing / Floor Flatness Testing & Observations.
+ *
+ * Examples: 2 pours + 50k SF → 2; 2 pours + 100k SF → 4; 0 pours + 25k SF → 1.
+ */
+export function suggestFloorFlatnessTrips(
+  takeoff: ProjectTakeoff | null | undefined
+): FloorFlatnessTripSuggestion {
+  const pourRaw = takeoff?.slabOnGradePourCount;
+  const pourCount =
+    pourRaw != null && Number.isFinite(Number(pourRaw)) && Number(pourRaw) > 0
+      ? Math.floor(n(pourRaw))
+      : 0;
+  const pourTrips = pourCount > 0 ? pourCount : 0;
+
+  const dedicated = n(takeoff?.floorFlatnessSf, 0);
+  const sfSource: FloorFlatnessTripSuggestion["sfSource"] =
+    dedicated > 0
+      ? "floorFlatnessSf"
+      : n(takeoff?.buildingAreaSf, 0) > 0
+        ? "buildingAreaSf"
+        : "none";
+  const sf = effectiveFloorFlatnessSf(takeoff);
+  const ft2PerTrip =
+    n(takeoff?.ft2PerTripFloorFlatness, 0) > 0
+      ? n(takeoff?.ft2PerTripFloorFlatness)
+      : DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS;
+  const sfTrips = sf > 0 ? ceilTrips(sf, ft2PerTrip) : 0;
+  const trips = Math.max(pourTrips, sfTrips);
+
+  return {
+    trips,
+    pourTrips,
+    sfTrips,
+    pourCount,
+    sf,
+    ft2PerTrip,
+    sfSource,
+  };
+}
+
+export function hasFloorFlatnessTakeoff(
+  takeoff: ProjectTakeoff | null | undefined
+): boolean {
+  return suggestFloorFlatnessTrips(takeoff).trips > 0;
+}
+
+export function floorFlatnessTripRuleLabel(
+  takeoff: ProjectTakeoff | null | undefined
+): string {
+  const suggestion = suggestFloorFlatnessTrips(takeoff);
+  const sourceNote =
+    suggestion.sfSource === "floorFlatnessSf"
+      ? "floor flatness SF"
+      : suggestion.sfSource === "buildingAreaSf"
+        ? "building area SF (floor flatness SF not set)"
+        : "building SF";
+
+  if (suggestion.trips <= 0) {
+    return `Floor Flatness: 1 trip per slab-on-grade pour or 1 trip / ${suggestion.ft2PerTrip.toLocaleString()} ft² — suggested = max(pours, SF rule). Enter pour count and/or SF (falls back to building area).`;
+  }
+  return `Floor Flatness: pours: ${suggestion.pourTrips} | SF rule: ${suggestion.sfTrips} → using max ${suggestion.trips} (from ${sourceNote}${suggestion.sf > 0 ? `, ${suggestion.sf.toLocaleString()} ft² / ${suggestion.ft2PerTrip.toLocaleString()}` : ""}).`;
+}
+
+export function applyFloorFlatnessTakeoffToDrivers(
+  drivers: Drivers,
+  takeoff: ProjectTakeoff | null | undefined
+): Drivers {
+  const suggestion = suggestFloorFlatnessTrips(takeoff);
+  if (suggestion.trips <= 0) return { ...drivers };
+
+  const trips = suggestion.trips;
+  const hours = trips * FLOOR_FLATNESS_HOURS_PER_TRIP;
+  const otHours = Math.round(hours * 0.15 * 10) / 10;
+  const source =
+    suggestion.sfSource === "floorFlatnessSf"
+      ? "floorFlatnessSf"
+      : "buildingAreaSf";
+  const notesDefault = `From takeoff: max(pours ${suggestion.pourTrips}, SF ceil(${suggestion.sf} / ${suggestion.ft2PerTrip})=${suggestion.sfTrips}) (${source}) = ${trips} trips`;
+
+  return {
+    ...drivers,
+    trips,
+    hours,
+    otHours,
+    days: trips,
+    vehicleTrips: trips,
+    notes:
+      typeof drivers.notes === "string" && drivers.notes.trim()
+        ? drivers.notes
+        : notesDefault,
+  };
+}
+
+export const FLOOR_FLATNESS_PARENT_NAME =
+  "Floor Flatness Testing & Observations";
+
+/** Floor-Flatness Testing (seed legacy) or Floor Flatness Testing & Observations. */
+export function isFloorFlatnessParent(name: string): boolean {
+  const lower = name.toLowerCase().trim();
+  return (
+    lower === "floor flatness testing & observations" ||
+    lower === "floor-flatness testing" ||
+    lower === "floor flatness testing" ||
+    ((lower.includes("floor-flatness") || lower.includes("floor flatness")) &&
+      (lower.includes("testing") || lower.includes("observation")))
+  );
+}
+
 export function suggestFieldLines(
   parentName: string,
   drivers: Drivers,
@@ -1413,6 +1562,11 @@ export function suggestFieldLines(
     hasStructuralSteelTakeoff(takeoff)
   ) {
     d = applyStructuralSteelTakeoffToDrivers(drivers, takeoff);
+  } else if (
+    isFloorFlatnessParent(parentName) &&
+    hasFloorFlatnessTakeoff(takeoff)
+  ) {
+    d = applyFloorFlatnessTakeoffToDrivers(drivers, takeoff);
   }
 
   const trips = n(d.trips, 0);
@@ -1508,7 +1662,7 @@ export function suggestFieldLines(
     const days = n(d.days, 0);
     if (hours > 0 || days > 0) {
       const qty = hours > 0 ? hours : n(d.days, 1);
-      lines.push({ description: "Floor-Flatness Testing", quantity: qty, units: hours > 0 ? "hours" : "day", trips, isLab: false });
+      lines.push({ description: FLOOR_FLATNESS_PARENT_NAME, quantity: qty, units: hours > 0 ? "hours" : "day", trips, isLab: false });
     }
     if (vehicleTrips > 0)
       lines.push({ description: "Vehicle Charge", quantity: vehicleTrips, units: "each", trips: vehicleTrips, isLab: false });
@@ -1722,6 +1876,9 @@ export function takeoffFromProject(project: {
   structuralSteelSfPerTrip?: number | null;
   structuralSteelFinalInspectionTrips?: number | null;
   structureLevelCount?: number | null;
+  slabOnGradePourCount?: number | null;
+  floorFlatnessSf?: number | null;
+  ft2PerTripFloorFlatness?: number | null;
 }): ProjectTakeoff {
   return {
     buildingAreaSf: project.buildingAreaSf ?? null,
@@ -1790,5 +1947,10 @@ export function takeoffFromProject(project: {
       project.structureLevelCount != null && project.structureLevelCount >= 1
         ? Math.floor(project.structureLevelCount)
         : DEFAULT_STRUCTURE_LEVEL_COUNT,
+    slabOnGradePourCount: project.slabOnGradePourCount ?? null,
+    floorFlatnessSf: project.floorFlatnessSf ?? null,
+    ft2PerTripFloorFlatness:
+      project.ft2PerTripFloorFlatness ??
+      DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS,
   };
 }

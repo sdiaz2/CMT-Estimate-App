@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "./prisma";
 import {
+  applyConcreteTakeoffToDrivers,
   applyEarthworkTakeoffToDrivers,
   applyFoundationTakeoffToDrivers,
   DEFAULT_EARTHWORK_SF_PER_TRIP,
@@ -15,9 +16,13 @@ import {
   DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
+  DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
+  DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
+  hasConcreteTakeoff,
   hasEarthworkTakeoff,
   hasFoundationTakeoff,
   isCipDeepFoundationsParent,
+  isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
   missCheckPrompts,
   normalizePierType,
@@ -63,6 +68,22 @@ function takeoffDataFromForm(formData: FormData) {
   const piersStraightRaw = parseOptionalFloat(formData, "piersPerTripStraight");
   const piersCasedRaw = parseOptionalFloat(formData, "piersPerTripCased");
   const piersBelledRaw = parseOptionalFloat(formData, "piersPerTripBelled");
+  const concreteYd3GradeBeamsPierCaps = parseOptionalFloat(
+    formData,
+    "concreteYd3GradeBeamsPierCaps"
+  );
+  const yd3PerTripGradeBeamsRaw = parseOptionalFloat(
+    formData,
+    "yd3PerTripGradeBeams"
+  );
+  const concreteYd3BuildingSlab = parseOptionalFloat(
+    formData,
+    "concreteYd3BuildingSlab"
+  );
+  const yd3PerTripBuildingSlabRaw = parseOptionalFloat(
+    formData,
+    "yd3PerTripBuildingSlab"
+  );
   return {
     buildingAreaSf,
     moistureConditionedSubgrade: parseCheckbox(formData, "moistureConditionedSubgrade"),
@@ -126,6 +147,16 @@ function takeoffDataFromForm(formData: FormData) {
       piersBelledRaw !== null && piersBelledRaw > 0
         ? piersBelledRaw
         : DEFAULT_PIERS_PER_TRIP_BELLED,
+    concreteYd3GradeBeamsPierCaps,
+    yd3PerTripGradeBeams:
+      yd3PerTripGradeBeamsRaw !== null && yd3PerTripGradeBeamsRaw > 0
+        ? yd3PerTripGradeBeamsRaw
+        : DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
+    concreteYd3BuildingSlab,
+    yd3PerTripBuildingSlab:
+      yd3PerTripBuildingSlabRaw !== null && yd3PerTripBuildingSlabRaw > 0
+        ? yd3PerTripBuildingSlabRaw
+        : DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
   };
 }
 
@@ -284,6 +315,15 @@ export async function applyFieldSuggestions(projectId: string, parentId: string)
       where: { id: parentId },
       data: { drivers: JSON.stringify(drivers) },
     });
+  } else if (
+    isConcreteTestingReinforcingParent(parent.catalog.name) &&
+    hasConcreteTakeoff(takeoff)
+  ) {
+    drivers = applyConcreteTakeoffToDrivers(drivers, takeoff);
+    await prisma.projectParent.update({
+      where: { id: parentId },
+      data: { drivers: JSON.stringify(drivers) },
+    });
   }
 
   const suggestions = suggestFieldLines(parent.catalog.name, drivers, takeoff);
@@ -333,6 +373,15 @@ export async function applyAllFieldSuggestions(projectId: string) {
       hasFoundationTakeoff(takeoff)
     ) {
       drivers = applyFoundationTakeoffToDrivers(drivers, takeoff);
+      await prisma.projectParent.update({
+        where: { id: parent.id },
+        data: { drivers: JSON.stringify(drivers) },
+      });
+    } else if (
+      isConcreteTestingReinforcingParent(parent.catalog.name) &&
+      hasConcreteTakeoff(takeoff)
+    ) {
+      drivers = applyConcreteTakeoffToDrivers(drivers, takeoff);
       await prisma.projectParent.update({
         where: { id: parent.id },
         data: { drivers: JSON.stringify(drivers) },

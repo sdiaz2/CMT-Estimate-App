@@ -32,6 +32,11 @@ export type ProjectTakeoff = {
   piersPerTripStraight?: number | null;
   piersPerTripCased?: number | null;
   piersPerTripBelled?: number | null;
+  concreteYd3GradeBeamsPierCaps?: number | null;
+  yd3PerTripGradeBeams?: number | null;
+  concreteYd3BuildingSlab?: number | null;
+  yd3PerTripBuildingSlab?: number | null;
+  // Future pour types (walls, etc.) get their own yd³ + divisor fields here.
 };
 
 /**
@@ -549,6 +554,208 @@ export function isCipDeepFoundationsParent(name: string): boolean {
   return n.includes("cip deep") || n.includes("deep foundations");
 }
 
+export const CONCRETE_HOURS_PER_TRIP = 4;
+
+export const DEFAULT_YD3_PER_TRIP_GRADE_BEAMS = 137.5;
+export const YD3_PER_TRIP_GRADE_BEAMS_RANGE = { min: 100, max: 175 } as const;
+export const MIN_TRIPS_GRADE_BEAMS_PIER_CAPS = 2;
+
+export const DEFAULT_YD3_PER_TRIP_BUILDING_SLAB = 300;
+export const MIN_TRIPS_BUILDING_SLAB = 2;
+
+/** Shared pour trip helper: when yd³ > 0, max(minTrips, ceil(yd³ / divisor)). */
+function concretePourTrips(yd3: number, divisor: number, minTrips: number): number {
+  if (yd3 <= 0 || divisor <= 0) return 0;
+  return Math.max(minTrips, Math.ceil(yd3 / divisor));
+}
+
+/**
+ * Suggested concrete trips breakdown.
+ * Rule A (grade beams / pier caps) + Rule B (building slab); structure ready for C (walls, …).
+ * total = gradeBeamsPierCapsTrips + buildingSlabTrips (+ future pour-type trips)
+ */
+export type ConcreteTripSuggestion = {
+  gradeBeamsPierCapsTrips: number;
+  buildingSlabTrips: number;
+  total: number;
+};
+
+/**
+ * Concrete Testing & Reinforcing Steel Observations — trip rules:
+ *
+ * Rule A — Grade beams and pier caps:
+ *   raw = ceil(concreteYd3GradeBeamsPierCaps / yd3PerTripGradeBeams)
+ *   when yd3 > 0: final = max(2, raw)  (minimum 2 trips)
+ *   divisor default mid of 100–175 → 137.5
+ *
+ * Rule B — Building slab:
+ *   raw = ceil(concreteYd3BuildingSlab / yd3PerTripBuildingSlab)
+ *   when yd3 > 0: final = max(2, raw)  (minimum 2 trips if ceil < 2)
+ *   divisor default 300
+ *
+ * total = gradeBeamsPierCapsTrips + buildingSlabTrips
+ *
+ * Example A: 50 yd³ @ 137.5 → ceil(0.36)=1 → min 2 → 2 trips
+ * Example A: 400 yd³ @ 137.5 → ceil(2.91)=3 trips
+ * Example B: 200 yd³ @ 300 → ceil(0.67)=1 → min 2 → 2 trips
+ * Example B: 900 yd³ @ 300 → ceil(3)=3 trips
+ */
+export function suggestConcreteTrips(
+  takeoff: ProjectTakeoff | null | undefined
+): ConcreteTripSuggestion {
+  const gradeYd3 = n(takeoff?.concreteYd3GradeBeamsPierCaps, 0);
+  const gradeDivisor =
+    n(takeoff?.yd3PerTripGradeBeams, 0) > 0
+      ? n(takeoff?.yd3PerTripGradeBeams)
+      : DEFAULT_YD3_PER_TRIP_GRADE_BEAMS;
+  const gradeBeamsPierCapsTrips = concretePourTrips(
+    gradeYd3,
+    gradeDivisor,
+    MIN_TRIPS_GRADE_BEAMS_PIER_CAPS
+  );
+
+  const slabYd3 = n(takeoff?.concreteYd3BuildingSlab, 0);
+  const slabDivisor =
+    n(takeoff?.yd3PerTripBuildingSlab, 0) > 0
+      ? n(takeoff?.yd3PerTripBuildingSlab)
+      : DEFAULT_YD3_PER_TRIP_BUILDING_SLAB;
+  const buildingSlabTrips = concretePourTrips(
+    slabYd3,
+    slabDivisor,
+    MIN_TRIPS_BUILDING_SLAB
+  );
+
+  return {
+    gradeBeamsPierCapsTrips,
+    buildingSlabTrips,
+    total: gradeBeamsPierCapsTrips + buildingSlabTrips,
+  };
+}
+
+export function hasConcreteTakeoff(
+  takeoff: ProjectTakeoff | null | undefined
+): boolean {
+  return suggestConcreteTrips(takeoff).total > 0;
+}
+
+export function concreteTripRuleLabels(
+  takeoff: ProjectTakeoff | null | undefined
+): {
+  gradeBeamsPierCaps?: string;
+  buildingSlab?: string;
+  combined?: string;
+} {
+  const gradeYd3 = n(takeoff?.concreteYd3GradeBeamsPierCaps, 0);
+  const gradeDivisor =
+    n(takeoff?.yd3PerTripGradeBeams, 0) > 0
+      ? n(takeoff?.yd3PerTripGradeBeams)
+      : DEFAULT_YD3_PER_TRIP_GRADE_BEAMS;
+  const slabYd3 = n(takeoff?.concreteYd3BuildingSlab, 0);
+  const slabDivisor =
+    n(takeoff?.yd3PerTripBuildingSlab, 0) > 0
+      ? n(takeoff?.yd3PerTripBuildingSlab)
+      : DEFAULT_YD3_PER_TRIP_BUILDING_SLAB;
+  const suggestion = suggestConcreteTrips(takeoff);
+  const out: {
+    gradeBeamsPierCaps?: string;
+    buildingSlab?: string;
+    combined?: string;
+  } = {};
+
+  if (gradeYd3 > 0) {
+    const raw = Math.ceil(gradeYd3 / gradeDivisor);
+    out.gradeBeamsPierCaps = `Grade beams / pier caps: ceil(${gradeYd3.toLocaleString()} / ${gradeDivisor}) = ${raw}, min ${MIN_TRIPS_GRADE_BEAMS_PIER_CAPS} → ${suggestion.gradeBeamsPierCapsTrips} trips (typical 100–175 yd³/trip)`;
+  } else {
+    out.gradeBeamsPierCaps = `Grade beams / pier caps: 1 trip / ${gradeDivisor} yd³ (typical 100–175; default mid 137.5), minimum ${MIN_TRIPS_GRADE_BEAMS_PIER_CAPS} trips when volume > 0. Enter yd³ to suggest trips.`;
+  }
+
+  if (slabYd3 > 0) {
+    const raw = Math.ceil(slabYd3 / slabDivisor);
+    out.buildingSlab = `Building slab: ceil(${slabYd3.toLocaleString()} / ${slabDivisor}) = ${raw}, min ${MIN_TRIPS_BUILDING_SLAB} → ${suggestion.buildingSlabTrips} trips (1 trip / ${slabDivisor} yd³ or more)`;
+  } else {
+    out.buildingSlab = `Building slab: 1 trip / ${slabDivisor} yd³ (default 300), minimum ${MIN_TRIPS_BUILDING_SLAB} trips when volume > 0 but ceil < 2. Enter yd³ to suggest trips.`;
+  }
+
+  const parts: string[] = [];
+  if (suggestion.gradeBeamsPierCapsTrips > 0)
+    parts.push(`${suggestion.gradeBeamsPierCapsTrips} grade beams/pier caps`);
+  if (suggestion.buildingSlabTrips > 0)
+    parts.push(`${suggestion.buildingSlabTrips} building slab`);
+  if (parts.length > 1) {
+    out.combined = `Combined concrete: ${parts.join(" + ")} = ${suggestion.total} trips`;
+  } else if (suggestion.total > 0) {
+    out.combined = `Total suggested concrete trips: ${suggestion.total}`;
+  }
+
+  return out;
+}
+
+export function concreteTripRuleLabel(
+  takeoff: ProjectTakeoff | null | undefined
+): string {
+  const labels = concreteTripRuleLabels(takeoff);
+  return [labels.gradeBeamsPierCaps, labels.buildingSlab, labels.combined]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+export function applyConcreteTakeoffToDrivers(
+  drivers: Drivers,
+  takeoff: ProjectTakeoff | null | undefined
+): Drivers {
+  const suggestion = suggestConcreteTrips(takeoff);
+  if (suggestion.total <= 0) return { ...drivers };
+
+  const trips = suggestion.total;
+  const hours = trips * CONCRETE_HOURS_PER_TRIP;
+  const otHours = Math.round(hours * 0.15 * 10) / 10;
+
+  const gradeYd3 = n(takeoff?.concreteYd3GradeBeamsPierCaps, 0);
+  const gradeDivisor =
+    n(takeoff?.yd3PerTripGradeBeams, 0) > 0
+      ? n(takeoff?.yd3PerTripGradeBeams)
+      : DEFAULT_YD3_PER_TRIP_GRADE_BEAMS;
+  const slabYd3 = n(takeoff?.concreteYd3BuildingSlab, 0);
+  const slabDivisor =
+    n(takeoff?.yd3PerTripBuildingSlab, 0) > 0
+      ? n(takeoff?.yd3PerTripBuildingSlab)
+      : DEFAULT_YD3_PER_TRIP_BUILDING_SLAB;
+
+  const noteParts: string[] = [];
+  if (suggestion.gradeBeamsPierCapsTrips > 0) {
+    noteParts.push(
+      `grade beams/pier caps max(2, ceil(${gradeYd3} / ${gradeDivisor})) = ${suggestion.gradeBeamsPierCapsTrips}`
+    );
+  }
+  if (suggestion.buildingSlabTrips > 0) {
+    noteParts.push(
+      `building slab max(2, ceil(${slabYd3} / ${slabDivisor})) = ${suggestion.buildingSlabTrips}`
+    );
+  }
+  const notesDefault =
+    noteParts.length > 1
+      ? `From takeoff: ${noteParts.join(" + ")} = ${trips} trips`
+      : `From takeoff: ${noteParts.join("; ")} trips`;
+
+  return {
+    ...drivers,
+    trips,
+    hours,
+    otHours,
+    days: trips,
+    vehicleTrips: trips,
+    notes:
+      typeof drivers.notes === "string" && drivers.notes.trim()
+        ? drivers.notes
+        : notesDefault,
+  };
+}
+
+export function isConcreteTestingReinforcingParent(name: string): boolean {
+  const lower = name.toLowerCase();
+  return lower.includes("concrete testing") && lower.includes("reinforcing");
+}
+
 export function suggestFieldLines(
   parentName: string,
   drivers: Drivers,
@@ -562,6 +769,11 @@ export function suggestFieldLines(
     hasFoundationTakeoff(takeoff)
   ) {
     d = applyFoundationTakeoffToDrivers(drivers, takeoff);
+  } else if (
+    isConcreteTestingReinforcingParent(parentName) &&
+    hasConcreteTakeoff(takeoff)
+  ) {
+    d = applyConcreteTakeoffToDrivers(drivers, takeoff);
   }
 
   const trips = n(d.trips, 0);
@@ -822,6 +1034,10 @@ export function takeoffFromProject(project: {
   piersPerTripStraight?: number | null;
   piersPerTripCased?: number | null;
   piersPerTripBelled?: number | null;
+  concreteYd3GradeBeamsPierCaps?: number | null;
+  yd3PerTripGradeBeams?: number | null;
+  concreteYd3BuildingSlab?: number | null;
+  yd3PerTripBuildingSlab?: number | null;
 }): ProjectTakeoff {
   return {
     buildingAreaSf: project.buildingAreaSf ?? null,
@@ -850,5 +1066,12 @@ export function takeoffFromProject(project: {
     piersPerTripCased: project.piersPerTripCased ?? DEFAULT_PIERS_PER_TRIP_CASED,
     piersPerTripBelled:
       project.piersPerTripBelled ?? DEFAULT_PIERS_PER_TRIP_BELLED,
+    concreteYd3GradeBeamsPierCaps:
+      project.concreteYd3GradeBeamsPierCaps ?? null,
+    yd3PerTripGradeBeams:
+      project.yd3PerTripGradeBeams ?? DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
+    concreteYd3BuildingSlab: project.concreteYd3BuildingSlab ?? null,
+    yd3PerTripBuildingSlab:
+      project.yd3PerTripBuildingSlab ?? DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
   };
 }

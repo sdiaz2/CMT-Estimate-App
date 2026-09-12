@@ -136,6 +136,50 @@ Parent: **CIP Deep Foundations (Drilled Straight Shaft Piers)**. Apply suggestio
 
 Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the CIP Deep Foundations parent.
 
+
+### Concrete Testing & Reinforcing Steel Observations — trip suggestions
+
+Parent: **Concrete Testing & Reinforcing Steel Observations**. Apply suggestions sets **Trips** and cascades Concrete Testing hours (~4 hr/trip), OT (~15%), and Vehicle — same pattern as other field parents. Rules A (grade beams/pier caps) and B (building slab) are implemented; structure ready for more pour types (walls, etc.) without a rewrite.
+
+**`total = gradeBeamsPierCapsTrips + buildingSlabTrips`** (+ future pour-type trips when added)
+
+#### Rule A — Grade beams and pier caps
+
+| Input | Notes |
+|-------|--------|
+| Grade beams / pier caps (yd³) | `concreteYd3GradeBeamsPierCaps` |
+| yd³ per trip | Editable; **typical 100–175**; **default mid 137.5** (`yd3PerTripGradeBeams`) |
+
+**Formula (when yd³ > 0):**
+
+1. `raw = ceil(concreteYd3GradeBeamsPierCaps / yd3PerTripGradeBeams)`
+2. `gradeBeamsPierCapsTrips = max(2, raw)` — **minimum 2 trips**
+
+**Examples:**
+
+- 50 yd³ @ 137.5 → ceil(0.36) = 1 → min 2 → **2 trips**
+- 400 yd³ @ 137.5 → ceil(2.91) = **3 trips**
+
+#### Rule B — Building slab
+
+| Input | Notes |
+|-------|--------|
+| Building slab (yd³) | `concreteYd3BuildingSlab` |
+| yd³ per trip | Editable; **default 300** (`yd3PerTripBuildingSlab`) — one trip for every 300 yd³ or more |
+
+**Formula (when yd³ > 0):**
+
+1. `raw = ceil(concreteYd3BuildingSlab / yd3PerTripBuildingSlab)`
+2. `buildingSlabTrips = max(2, raw)` — if volume &gt; 0 but ceil &lt; 2, **minimum 2 trips**
+
+**Examples:**
+
+- 200 yd³ @ 300 → ceil(0.67) = 1 → min 2 → **2 trips**
+- 900 yd³ @ 300 → ceil(3) = **3 trips**
+- Rule A 50 yd³ (2) + Rule B 200 yd³ (2) → **4 trips** total
+
+Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Concrete Testing parent.
+
 ## Assumptions
 
 - Heuristic suggestions never lock numbers

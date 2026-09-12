@@ -85,6 +85,14 @@ model Project {
   piersPerTripCased           Float    @default(5)
   /// Piers per trip for belled/underreamed (typical 5–9; default 7)
   piersPerTripBelled          Float    @default(7)
+  /// Grade beams / pier caps concrete volume (yd³) for Concrete Testing trip rule A
+  concreteYd3GradeBeamsPierCaps Float?
+  /// yd³ per trip for grade beams / pier caps (typical 100–175; default mid 137.5)
+  yd3PerTripGradeBeams        Float    @default(137.5)
+  /// Building slab concrete volume (yd³) for Concrete Testing trip rule B
+  concreteYd3BuildingSlab     Float?
+  /// yd³ per trip for building slab (default 300)
+  yd3PerTripBuildingSlab      Float    @default(300)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
   parents                     ProjectParent[]

@@ -8,8 +8,13 @@ import {
   DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
+  DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
+  DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
+  MIN_TRIPS_BUILDING_SLAB,
+  MIN_TRIPS_GRADE_BEAMS_PIER_CAPS,
   normalizePierType,
   pierTypeLabel,
+  suggestConcreteTrips,
   suggestEarthworkTrips,
   suggestFoundationTrips,
   type PierType,
@@ -40,6 +45,10 @@ export type TakeoffFactsValues = {
   piersPerTripStraight?: number | null;
   piersPerTripCased?: number | null;
   piersPerTripBelled?: number | null;
+  concreteYd3GradeBeamsPierCaps?: number | null;
+  yd3PerTripGradeBeams?: number | null;
+  concreteYd3BuildingSlab?: number | null;
+  yd3PerTripBuildingSlab?: number | null;
 };
 
 /** Shared Takeoff / Project facts fields (used inside a parent <form>). */
@@ -87,6 +96,14 @@ export function TakeoffFactsFields({
     values?.piersPerTripBelled && values.piersPerTripBelled > 0
       ? values.piersPerTripBelled
       : DEFAULT_PIERS_PER_TRIP_BELLED;
+  const yd3GradeBeamsDivisor =
+    values?.yd3PerTripGradeBeams && values.yd3PerTripGradeBeams > 0
+      ? values.yd3PerTripGradeBeams
+      : DEFAULT_YD3_PER_TRIP_GRADE_BEAMS;
+  const yd3BuildingSlabDivisor =
+    values?.yd3PerTripBuildingSlab && values.yd3PerTripBuildingSlab > 0
+      ? values.yd3PerTripBuildingSlab
+      : DEFAULT_YD3_PER_TRIP_BUILDING_SLAB;
   const limeTreated = !!values?.limeTreatedPavementSubgrade;
   const sidewalksBunched = !!values?.sidewalksBunchedTogether;
 
@@ -120,6 +137,17 @@ export function TakeoffFactsFields({
     piersPerTripBelled: piersBelledDivisor,
   });
   const showFoundation = foundationSuggestion.trips > 0;
+  const concreteSuggestion = suggestConcreteTrips({
+    concreteYd3GradeBeamsPierCaps: values?.concreteYd3GradeBeamsPierCaps,
+    yd3PerTripGradeBeams: yd3GradeBeamsDivisor,
+    concreteYd3BuildingSlab: values?.concreteYd3BuildingSlab,
+    yd3PerTripBuildingSlab: yd3BuildingSlabDivisor,
+  });
+  const gradeBeamsYd3 = values?.concreteYd3GradeBeamsPierCaps ?? 0;
+  const buildingSlabYd3 = values?.concreteYd3BuildingSlab ?? 0;
+  const showConcrete = concreteSuggestion.total > 0;
+  const showGradeBeams = (gradeBeamsYd3 ?? 0) > 0;
+  const showBuildingSlab = (buildingSlabYd3 ?? 0) > 0;
   const showBuilding = (buildingSf ?? 0) > 0;
   const showPavement =
     limeTreated ? (pavementSf ?? 0) > 0 : (pavementLf ?? 0) > 0;
@@ -144,7 +172,10 @@ export function TakeoffFactsFields({
           <strong>{DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP}</strong> LF (bunched);
           utility trench{" "}
           <strong>{DEFAULT_UTILITY_TRENCH_LF_PER_TRIP}</strong> LF/trip (typical
-          150–175). Suggestions never lock — edit freely after Apply.
+          150–175). Concrete (Rule A): grade beams/pier caps default{" "}
+          <strong>{DEFAULT_YD3_PER_TRIP_GRADE_BEAMS}</strong> yd³/trip (typical
+          100–175), min {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS} trips. Suggestions
+          never lock — edit freely after Apply.
         </p>
       </div>
 
@@ -582,6 +613,128 @@ export function TakeoffFactsFields({
                 <strong>{foundationSuggestion.trips} trips</strong>
               </p>
             )}
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-slate-200 pt-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          Concrete Testing &amp; Reinforcing Steel Observations
+        </p>
+        <p className="mb-3 text-xs text-slate-500">
+          Rule A — Grade beams/pier caps: max(
+          {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS}, ceil(yd³ / divisor)), default{" "}
+          <strong>{DEFAULT_YD3_PER_TRIP_GRADE_BEAMS}</strong> (typical 100–175).
+          Rule B — Building slab: max({MIN_TRIPS_BUILDING_SLAB}, ceil(yd³ /
+          divisor)), default{" "}
+          <strong>{DEFAULT_YD3_PER_TRIP_BUILDING_SLAB}</strong> yd³/trip. Total =
+          A + B. Ready for more pour types later.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Grade beams / pier caps (yd³)
+            </span>
+            <input
+              name="concreteYd3GradeBeamsPierCaps"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.concreteYd3GradeBeamsPierCaps != null &&
+                values.concreteYd3GradeBeamsPierCaps > 0
+                  ? String(values.concreteYd3GradeBeamsPierCaps)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 50"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              yd³ per trip (grade beams / pier caps)
+            </span>
+            <input
+              name="yd3PerTripGradeBeams"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(yd3GradeBeamsDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              typical 100–175 (default mid 137.5)
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Building slab (yd³)
+            </span>
+            <input
+              name="concreteYd3BuildingSlab"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.concreteYd3BuildingSlab != null &&
+                values.concreteYd3BuildingSlab > 0
+                  ? String(values.concreteYd3BuildingSlab)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 200"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              yd³ per trip (building slab)
+            </span>
+            <input
+              name="yd3PerTripBuildingSlab"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(yd3BuildingSlabDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 300 (1 trip / 300 yd³ or more; min 2 if less)
+            </span>
+          </label>
+        </div>
+        {showConcrete && (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            {showGradeBeams && (
+              <p>
+                Grade beams / pier caps: max(
+                {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS}, ceil(
+                {Number(gradeBeamsYd3).toLocaleString()} /{" "}
+                {yd3GradeBeamsDivisor.toLocaleString()})) ={" "}
+                <strong>
+                  {concreteSuggestion.gradeBeamsPierCapsTrips} trips
+                </strong>
+              </p>
+            )}
+            {showBuildingSlab && (
+              <p className={showGradeBeams ? "mt-1" : undefined}>
+                Building slab: max({MIN_TRIPS_BUILDING_SLAB}, ceil(
+                {Number(buildingSlabYd3).toLocaleString()} /{" "}
+                {yd3BuildingSlabDivisor.toLocaleString()})) ={" "}
+                <strong>{concreteSuggestion.buildingSlabTrips} trips</strong>
+              </p>
+            )}
+            <p className="mt-1 font-medium">
+              Total concrete:{" "}
+              {[
+                showGradeBeams
+                  ? concreteSuggestion.gradeBeamsPierCapsTrips
+                  : null,
+                showBuildingSlab ? concreteSuggestion.buildingSlabTrips : null,
+              ]
+                .filter((x) => x != null)
+                .join(" + ")}{" "}
+              = {concreteSuggestion.total} trips
+            </p>
           </div>
         )}
       </div>

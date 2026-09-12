@@ -99,6 +99,11 @@ export default async function ProjectSetupPage({
               piersPerTripStraight: project.piersPerTripStraight,
               piersPerTripCased: project.piersPerTripCased,
               piersPerTripBelled: project.piersPerTripBelled,
+              concreteYd3GradeBeamsPierCaps:
+                project.concreteYd3GradeBeamsPierCaps,
+              yd3PerTripGradeBeams: project.yd3PerTripGradeBeams,
+              concreteYd3BuildingSlab: project.concreteYd3BuildingSlab,
+              yd3PerTripBuildingSlab: project.yd3PerTripBuildingSlab,
             }}
           />
         </div>

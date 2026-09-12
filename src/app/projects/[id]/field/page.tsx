@@ -22,13 +22,21 @@ import {
   DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
+  DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
+  DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
+  MIN_TRIPS_BUILDING_SLAB,
+  MIN_TRIPS_GRADE_BEAMS_PIER_CAPS,
+  concreteTripRuleLabels,
   earthworkTripRuleLabels,
   foundationTripRuleLabel,
+  hasConcreteTakeoff,
   hasEarthworkTakeoff,
   hasFoundationTakeoff,
   isCipDeepFoundationsParent,
+  isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
   parseDrivers,
+  suggestConcreteTrips,
   suggestEarthworkTrips,
   suggestFoundationTrips,
   takeoffFromProject,
@@ -72,6 +80,9 @@ export default async function FieldPage({
   const foundationSuggestion = suggestFoundationTrips(takeoff);
   const foundationLabel = foundationTripRuleLabel(takeoff);
   const foundationTakeoffApplies = hasFoundationTakeoff(takeoff);
+  const concreteSuggestion = suggestConcreteTrips(takeoff);
+  const concreteLabels = concreteTripRuleLabels(takeoff);
+  const concreteTakeoffApplies = hasConcreteTakeoff(takeoff);
   const buildingSf = takeoff.buildingAreaSf ?? 0;
   const pavementSf = takeoff.pavementAreaSf ?? 0;
   const pavementLf = takeoff.pavementSubgradeLf ?? 0;
@@ -85,6 +96,9 @@ export default async function FieldPage({
   );
   const hasCipDeepFoundations = fieldParents.some((p) =>
     isCipDeepFoundationsParent(p.catalog.name)
+  );
+  const hasConcreteTesting = fieldParents.some((p) =>
+    isConcreteTestingReinforcingParent(p.catalog.name)
   );
   const takeoffApplies = hasEarthworkTakeoff(takeoff);
 
@@ -149,6 +163,11 @@ export default async function FieldPage({
               piersPerTripStraight: project.piersPerTripStraight,
               piersPerTripCased: project.piersPerTripCased,
               piersPerTripBelled: project.piersPerTripBelled,
+              concreteYd3GradeBeamsPierCaps:
+                project.concreteYd3GradeBeamsPierCaps,
+              yd3PerTripGradeBeams: project.yd3PerTripGradeBeams,
+              concreteYd3BuildingSlab: project.concreteYd3BuildingSlab,
+              yd3PerTripBuildingSlab: project.yd3PerTripBuildingSlab,
             }}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -173,6 +192,33 @@ export default async function FieldPage({
                   : " (from pier count)"}
               </p>
             )}
+            {concreteTakeoffApplies && (
+              <p className="text-xs text-slate-600">
+                Concrete preview:{" "}
+                <strong>{concreteSuggestion.total} trips</strong>
+                {[
+                  concreteSuggestion.gradeBeamsPierCapsTrips > 0
+                    ? `grade beams/pier caps ${concreteSuggestion.gradeBeamsPierCapsTrips}`
+                    : null,
+                  concreteSuggestion.buildingSlabTrips > 0
+                    ? `building slab ${concreteSuggestion.buildingSlabTrips}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" + ")
+                  ? ` (${[
+                      concreteSuggestion.gradeBeamsPierCapsTrips > 0
+                        ? `grade beams/pier caps ${concreteSuggestion.gradeBeamsPierCapsTrips}`
+                        : null,
+                      concreteSuggestion.buildingSlabTrips > 0
+                        ? `building slab ${concreteSuggestion.buildingSlabTrips}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" + ")})`
+                  : ""}
+              </p>
+            )}
           </div>
         </form>
       </section>
@@ -191,6 +237,9 @@ export default async function FieldPage({
             const fieldLines = parent.lineItems.filter((l) => !l.isLab);
             const isEarthwork = isEarthworkTestingParent(parent.catalog.name);
             const isFoundation = isCipDeepFoundationsParent(parent.catalog.name);
+            const isConcrete = isConcreteTestingReinforcingParent(
+              parent.catalog.name
+            );
             const displayDrivers =
               isEarthwork && takeoffApplies && n(drivers.trips) === 0
                 ? { ...drivers, trips: suggestion.total }
@@ -198,7 +247,11 @@ export default async function FieldPage({
                     foundationTakeoffApplies &&
                     n(drivers.trips) === 0
                   ? { ...drivers, trips: foundationSuggestion.trips }
-                  : drivers;
+                  : isConcrete &&
+                      concreteTakeoffApplies &&
+                      n(drivers.trips) === 0
+                    ? { ...drivers, trips: concreteSuggestion.total }
+                    : drivers;
 
             return (
               <section
@@ -291,6 +344,40 @@ export default async function FieldPage({
                   </div>
                 )}
 
+                {isConcrete && (
+                  <div className="mb-4 space-y-2">
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                      <p className="font-medium">
+                        {concreteLabels.gradeBeamsPierCaps}
+                      </p>
+                      <p className="mt-1 text-xs text-amber-900/80">
+                        Rule A — Grade beams and pier caps: max(
+                        {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS}, ceil(yd³ / divisor)).
+                        Default {DEFAULT_YD3_PER_TRIP_GRADE_BEAMS} yd³/trip
+                        (typical 100–175).
+                      </p>
+                    </div>
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                      <p className="font-medium">
+                        {concreteLabels.buildingSlab}
+                      </p>
+                      <p className="mt-1 text-xs text-amber-900/80">
+                        Rule B — Building slab: 1 trip /{" "}
+                        {DEFAULT_YD3_PER_TRIP_BUILDING_SLAB} yd³ or more; if
+                        yd³ &gt; 0 but ceil &lt; 2, minimum{" "}
+                        {MIN_TRIPS_BUILDING_SLAB} trips. Apply suggestions sets
+                        Trips and cascades Concrete Testing / OT / Vehicle.
+                        Numbers stay editable.
+                      </p>
+                    </div>
+                    {concreteLabels.combined && (
+                      <div className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-950">
+                        {concreteLabels.combined}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <form
                   action={updateParentDrivers.bind(null, id, parent.id)}
                   className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8"
@@ -352,6 +439,17 @@ export default async function FieldPage({
           rules) or pier count + type. Defaults: straight-shaft{" "}
           {DEFAULT_PIERS_PER_TRIP_STRAIGHT} piers/trip; cased{" "}
           {DEFAULT_PIERS_PER_TRIP_CASED}; belled {DEFAULT_PIERS_PER_TRIP_BELLED}.
+        </p>
+      )}
+
+      {hasConcreteTesting && !concreteTakeoffApplies && (
+        <p className="mt-4 text-xs text-slate-500">
+          Tip: for Concrete Testing &amp; Reinforcing Steel Observations, enter
+          grade beams / pier caps yd³ (default{" "}
+          {DEFAULT_YD3_PER_TRIP_GRADE_BEAMS}/trip) and/or building slab yd³
+          (default {DEFAULT_YD3_PER_TRIP_BUILDING_SLAB}/trip). Each pour type
+          uses min {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS} trips when volume &gt; 0;
+          total = A + B.
         </p>
       )}
     </div>

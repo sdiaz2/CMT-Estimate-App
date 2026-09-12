@@ -108,6 +108,16 @@ export default async function ProjectSetupPage({
               yd3PerTripPrivatePavement: project.yd3PerTripPrivatePavement,
               concreteYd3PublicPavement: project.concreteYd3PublicPavement,
               yd3PerTripPublicPavement: project.yd3PerTripPublicPavement,
+              masonryLoadBearingCmuSf: project.masonryLoadBearingCmuSf,
+              masonrySfPerTripLoadBearingCmu:
+                project.masonrySfPerTripLoadBearingCmu,
+              masonryElevatorBuildingCount:
+                project.masonryElevatorBuildingCount,
+              masonryElevatorShaftHeightFt:
+                project.masonryElevatorShaftHeightFt,
+              masonryFtPerTripElevatorShaft:
+                project.masonryFtPerTripElevatorShaft,
+              masonryCmuEnclosureCount: project.masonryCmuEnclosureCount,
             }}
           />
         </div>

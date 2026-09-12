@@ -7,7 +7,10 @@ import {
   applyConcreteTakeoffToDrivers,
   applyEarthworkTakeoffToDrivers,
   applyFoundationTakeoffToDrivers,
+  applyMasonryTakeoffToDrivers,
   DEFAULT_EARTHWORK_SF_PER_TRIP,
+  DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
+  DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING,
   DEFAULT_PAVEMENT_LF_PER_TRIP,
   DEFAULT_PAVEMENT_SF_PER_TRIP,
   DEFAULT_PIERS_PER_TRIP_BELLED,
@@ -23,9 +26,11 @@ import {
   hasConcreteTakeoff,
   hasEarthworkTakeoff,
   hasFoundationTakeoff,
+  hasMasonryTakeoff,
   isCipDeepFoundationsParent,
   isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
+  isMasonryTestingParent,
   missCheckPrompts,
   normalizePierType,
   parseDrivers,
@@ -101,6 +106,30 @@ function takeoffDataFromForm(formData: FormData) {
   const yd3PerTripPublicPavementRaw = parseOptionalFloat(
     formData,
     "yd3PerTripPublicPavement"
+  );
+  const masonryLoadBearingCmuSf = parseOptionalFloat(
+    formData,
+    "masonryLoadBearingCmuSf"
+  );
+  const masonrySfPerTripLoadBearingCmuRaw = parseOptionalFloat(
+    formData,
+    "masonrySfPerTripLoadBearingCmu"
+  );
+  const masonryElevatorBuildingCountRaw = parseOptionalFloat(
+    formData,
+    "masonryElevatorBuildingCount"
+  );
+  const masonryElevatorShaftHeightFt = parseOptionalFloat(
+    formData,
+    "masonryElevatorShaftHeightFt"
+  );
+  const masonryFtPerTripElevatorShaftRaw = parseOptionalFloat(
+    formData,
+    "masonryFtPerTripElevatorShaft"
+  );
+  const masonryCmuEnclosureCountRaw = parseOptionalFloat(
+    formData,
+    "masonryCmuEnclosureCount"
   );
   return {
     buildingAreaSf,
@@ -185,6 +214,27 @@ function takeoffDataFromForm(formData: FormData) {
       yd3PerTripPublicPavementRaw !== null && yd3PerTripPublicPavementRaw > 0
         ? yd3PerTripPublicPavementRaw
         : DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT,
+    masonryLoadBearingCmuSf,
+    masonrySfPerTripLoadBearingCmu:
+      masonrySfPerTripLoadBearingCmuRaw !== null &&
+      masonrySfPerTripLoadBearingCmuRaw > 0
+        ? masonrySfPerTripLoadBearingCmuRaw
+        : DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING,
+    masonryElevatorBuildingCount:
+      masonryElevatorBuildingCountRaw !== null &&
+      masonryElevatorBuildingCountRaw > 0
+        ? Math.floor(masonryElevatorBuildingCountRaw)
+        : null,
+    masonryElevatorShaftHeightFt,
+    masonryFtPerTripElevatorShaft:
+      masonryFtPerTripElevatorShaftRaw !== null &&
+      masonryFtPerTripElevatorShaftRaw > 0
+        ? masonryFtPerTripElevatorShaftRaw
+        : DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
+    masonryCmuEnclosureCount:
+      masonryCmuEnclosureCountRaw !== null && masonryCmuEnclosureCountRaw > 0
+        ? Math.floor(masonryCmuEnclosureCountRaw)
+        : null,
   };
 }
 
@@ -352,6 +402,15 @@ export async function applyFieldSuggestions(projectId: string, parentId: string)
       where: { id: parentId },
       data: { drivers: JSON.stringify(drivers) },
     });
+  } else if (
+    isMasonryTestingParent(parent.catalog.name) &&
+    hasMasonryTakeoff(takeoff)
+  ) {
+    drivers = applyMasonryTakeoffToDrivers(drivers, takeoff);
+    await prisma.projectParent.update({
+      where: { id: parentId },
+      data: { drivers: JSON.stringify(drivers) },
+    });
   }
 
   const suggestions = suggestFieldLines(parent.catalog.name, drivers, takeoff);
@@ -410,6 +469,15 @@ export async function applyAllFieldSuggestions(projectId: string) {
       hasConcreteTakeoff(takeoff)
     ) {
       drivers = applyConcreteTakeoffToDrivers(drivers, takeoff);
+      await prisma.projectParent.update({
+        where: { id: parent.id },
+        data: { drivers: JSON.stringify(drivers) },
+      });
+    } else if (
+      isMasonryTestingParent(parent.catalog.name) &&
+      hasMasonryTakeoff(takeoff)
+    ) {
+      drivers = applyMasonryTakeoffToDrivers(drivers, takeoff);
       await prisma.projectParent.update({
         where: { id: parent.id },
         data: { drivers: JSON.stringify(drivers) },

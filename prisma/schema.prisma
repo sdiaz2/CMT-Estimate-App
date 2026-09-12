@@ -101,6 +101,18 @@ model Project {
   concreteYd3PublicPavement   Float?
   /// yd³ per trip for public pavement (default 900)
   yd3PerTripPublicPavement    Float    @default(900)
+  /// Load-bearing CMU wall area (SF) for Masonry Testing trip rule A
+  masonryLoadBearingCmuSf     Float?
+  /// SF of load-bearing CMU per masonry trip (default 5000)
+  masonrySfPerTripLoadBearingCmu Float @default(5000)
+  /// Number of multifamily buildings with an elevator (Masonry rule B)
+  masonryElevatorBuildingCount Int?
+  /// Elevator shaft CMU wall height per building (ft) for Masonry rule B
+  masonryElevatorShaftHeightFt Float?
+  /// Feet of elevator shaft height per masonry trip (default 16)
+  masonryFtPerTripElevatorShaft Float @default(16)
+  /// Dumpster and/or equipment CMU enclosure count (Masonry rule C; 1 trip each)
+  masonryCmuEnclosureCount    Int?
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
   parents                     ProjectParent[]

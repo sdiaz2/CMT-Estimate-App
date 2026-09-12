@@ -10,6 +10,8 @@ import {
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
   DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
+  DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
+  DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING,
   DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
   DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT,
   MIN_TRIPS_BUILDING_SLAB,
@@ -19,6 +21,7 @@ import {
   suggestConcreteTrips,
   suggestEarthworkTrips,
   suggestFoundationTrips,
+  suggestMasonryTrips,
   type PierType,
 } from "@/lib/heuristics";
 
@@ -55,6 +58,12 @@ export type TakeoffFactsValues = {
   yd3PerTripPrivatePavement?: number | null;
   concreteYd3PublicPavement?: number | null;
   yd3PerTripPublicPavement?: number | null;
+  masonryLoadBearingCmuSf?: number | null;
+  masonrySfPerTripLoadBearingCmu?: number | null;
+  masonryElevatorBuildingCount?: number | null;
+  masonryElevatorShaftHeightFt?: number | null;
+  masonryFtPerTripElevatorShaft?: number | null;
+  masonryCmuEnclosureCount?: number | null;
 };
 
 /** Shared Takeoff / Project facts fields (used inside a parent <form>). */
@@ -118,6 +127,16 @@ export function TakeoffFactsFields({
     values?.yd3PerTripPublicPavement && values.yd3PerTripPublicPavement > 0
       ? values.yd3PerTripPublicPavement
       : DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT;
+  const masonryLoadBearingDivisor =
+    values?.masonrySfPerTripLoadBearingCmu &&
+    values.masonrySfPerTripLoadBearingCmu > 0
+      ? values.masonrySfPerTripLoadBearingCmu
+      : DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING;
+  const masonryElevatorShaftDivisor =
+    values?.masonryFtPerTripElevatorShaft &&
+    values.masonryFtPerTripElevatorShaft > 0
+      ? values.masonryFtPerTripElevatorShaft
+      : DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT;
   const limeTreated = !!values?.limeTreatedPavementSubgrade;
   const sidewalksBunched = !!values?.sidewalksBunchedTogether;
 
@@ -170,6 +189,23 @@ export function TakeoffFactsFields({
   const showBuildingSlab = (buildingSlabYd3 ?? 0) > 0;
   const showPrivatePavement = (privatePavementYd3 ?? 0) > 0;
   const showPublicPavement = (publicPavementYd3 ?? 0) > 0;
+  const masonrySuggestion = suggestMasonryTrips({
+    masonryLoadBearingCmuSf: values?.masonryLoadBearingCmuSf,
+    masonrySfPerTripLoadBearingCmu: masonryLoadBearingDivisor,
+    masonryElevatorBuildingCount: values?.masonryElevatorBuildingCount,
+    masonryElevatorShaftHeightFt: values?.masonryElevatorShaftHeightFt,
+    masonryFtPerTripElevatorShaft: masonryElevatorShaftDivisor,
+    masonryCmuEnclosureCount: values?.masonryCmuEnclosureCount,
+  });
+  const loadBearingCmuSf = values?.masonryLoadBearingCmuSf ?? 0;
+  const elevatorBuildingCount = values?.masonryElevatorBuildingCount ?? 0;
+  const elevatorShaftHeightFt = values?.masonryElevatorShaftHeightFt ?? 0;
+  const cmuEnclosureCount = values?.masonryCmuEnclosureCount ?? 0;
+  const showMasonry = masonrySuggestion.total > 0;
+  const showLoadBearingCmu = (loadBearingCmuSf ?? 0) > 0;
+  const showElevatorShaft =
+    (elevatorBuildingCount ?? 0) > 0 && (elevatorShaftHeightFt ?? 0) > 0;
+  const showEnclosure = (cmuEnclosureCount ?? 0) > 0;
   const showBuilding = (buildingSf ?? 0) > 0;
   const showPavement =
     limeTreated ? (pavementSf ?? 0) > 0 : (pavementLf ?? 0) > 0;
@@ -200,7 +236,12 @@ export function TakeoffFactsFields({
           <strong>{DEFAULT_YD3_PER_TRIP_BUILDING_SLAB}</strong>; Rule C private{" "}
           <strong>{DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT}</strong> / public{" "}
           <strong>{DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT}</strong> (ceil only, no
-          min-2). Suggestions never lock — edit freely after Apply.
+          min-2). Masonry: load-bearing CMU{" "}
+          <strong>{DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING.toLocaleString()}</strong>{" "}
+          SF/trip; elevator shaft{" "}
+          <strong>{DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT}</strong> ft/trip ×
+          buildings; enclosures 1 trip each. Suggestions never lock — edit freely
+          after Apply.
         </p>
       </div>
 
@@ -868,6 +909,186 @@ export function TakeoffFactsFields({
                 .filter((x) => x != null)
                 .join(" + ")}{" "}
               = {concreteSuggestion.total} trips
+            </p>
+          </div>
+        )}
+      </div>
+
+
+      <div className="border-t border-slate-200 pt-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          Masonry Testing &amp; Observations
+        </p>
+        <p className="mb-3 text-xs text-slate-500">
+          Rule A — Load-bearing CMU: ceil(SF / divisor), default{" "}
+          <strong>{DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING.toLocaleString()}</strong>{" "}
+          SF/trip. Rule B — Elevator shaft CMU: buildings with elevator ×
+          ceil(height ft /{" "}
+          <strong>{DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT}</strong>). Rule C —
+          Dumpster/equipment CMU enclosures: 1 trip each. Total = A + B + C.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Load-bearing CMU wall (SF)
+            </span>
+            <input
+              name="masonryLoadBearingCmuSf"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.masonryLoadBearingCmuSf != null &&
+                values.masonryLoadBearingCmuSf > 0
+                  ? String(values.masonryLoadBearingCmuSf)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 12000"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              SF per trip (load-bearing CMU)
+            </span>
+            <input
+              name="masonrySfPerTripLoadBearingCmu"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(masonryLoadBearingDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 5,000 (1 trip / 5,000 SF or less)
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Buildings with elevator
+            </span>
+            <input
+              name="masonryElevatorBuildingCount"
+              type="number"
+              step="1"
+              min="0"
+              defaultValue={
+                values?.masonryElevatorBuildingCount != null &&
+                values.masonryElevatorBuildingCount > 0
+                  ? String(values.masonryElevatorBuildingCount)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 2"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              multifamily buildings that have an elevator
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Elevator shaft CMU height (ft per building)
+            </span>
+            <input
+              name="masonryElevatorShaftHeightFt"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.masonryElevatorShaftHeightFt != null &&
+                values.masonryElevatorShaftHeightFt > 0
+                  ? String(values.masonryElevatorShaftHeightFt)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 48"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              ft per trip (elevator shaft)
+            </span>
+            <input
+              name="masonryFtPerTripElevatorShaft"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(masonryElevatorShaftDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 16 (1 trip / 16 ft height per building)
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              CMU enclosures (dumpster / equipment)
+            </span>
+            <input
+              name="masonryCmuEnclosureCount"
+              type="number"
+              step="1"
+              min="0"
+              defaultValue={
+                values?.masonryCmuEnclosureCount != null &&
+                values.masonryCmuEnclosureCount > 0
+                  ? String(values.masonryCmuEnclosureCount)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 3"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              1 trip each
+            </span>
+          </label>
+        </div>
+        {showMasonry && (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            {showLoadBearingCmu && (
+              <p>
+                Load-bearing CMU: ceil(
+                {Number(loadBearingCmuSf).toLocaleString()} /{" "}
+                {masonryLoadBearingDivisor.toLocaleString()}) ={" "}
+                <strong>
+                  {masonrySuggestion.loadBearingCmuTrips} trips
+                </strong>
+              </p>
+            )}
+            {showElevatorShaft && (
+              <p className={showLoadBearingCmu ? "mt-1" : undefined}>
+                Elevator shaft: {Number(elevatorBuildingCount)} × ceil(
+                {Number(elevatorShaftHeightFt).toLocaleString()} /{" "}
+                {masonryElevatorShaftDivisor.toLocaleString()}) ={" "}
+                <strong>
+                  {masonrySuggestion.elevatorShaftTrips} trips
+                </strong>
+              </p>
+            )}
+            {showEnclosure && (
+              <p
+                className={
+                  showLoadBearingCmu || showElevatorShaft ? "mt-1" : undefined
+                }
+              >
+                Enclosures: {Number(cmuEnclosureCount)} × 1 ={" "}
+                <strong>{masonrySuggestion.enclosureTrips} trips</strong>
+              </p>
+            )}
+            <p className="mt-1 font-medium">
+              Total masonry:{" "}
+              {[
+                showLoadBearingCmu
+                  ? masonrySuggestion.loadBearingCmuTrips
+                  : null,
+                showElevatorShaft
+                  ? masonrySuggestion.elevatorShaftTrips
+                  : null,
+                showEnclosure ? masonrySuggestion.enclosureTrips : null,
+              ]
+                .filter((x) => x != null)
+                .join(" + ")}{" "}
+              = {masonrySuggestion.total} trips
             </p>
           </div>
         )}

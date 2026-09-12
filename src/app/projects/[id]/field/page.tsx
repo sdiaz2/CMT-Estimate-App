@@ -22,6 +22,8 @@ import {
   DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
+  DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
+  DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING,
   DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
   DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
   DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
@@ -34,13 +36,17 @@ import {
   hasConcreteTakeoff,
   hasEarthworkTakeoff,
   hasFoundationTakeoff,
+  hasMasonryTakeoff,
   isCipDeepFoundationsParent,
   isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
+  isMasonryTestingParent,
+  masonryTripRuleLabels,
   parseDrivers,
   suggestConcreteTrips,
   suggestEarthworkTrips,
   suggestFoundationTrips,
+  suggestMasonryTrips,
   takeoffFromProject,
 } from "@/lib/heuristics";
 
@@ -85,6 +91,9 @@ export default async function FieldPage({
   const concreteSuggestion = suggestConcreteTrips(takeoff);
   const concreteLabels = concreteTripRuleLabels(takeoff);
   const concreteTakeoffApplies = hasConcreteTakeoff(takeoff);
+  const masonrySuggestion = suggestMasonryTrips(takeoff);
+  const masonryLabels = masonryTripRuleLabels(takeoff);
+  const masonryTakeoffApplies = hasMasonryTakeoff(takeoff);
   const buildingSf = takeoff.buildingAreaSf ?? 0;
   const pavementSf = takeoff.pavementAreaSf ?? 0;
   const pavementLf = takeoff.pavementSubgradeLf ?? 0;
@@ -101,6 +110,9 @@ export default async function FieldPage({
   );
   const hasConcreteTesting = fieldParents.some((p) =>
     isConcreteTestingReinforcingParent(p.catalog.name)
+  );
+  const hasMasonryTesting = fieldParents.some((p) =>
+    isMasonryTestingParent(p.catalog.name)
   );
   const takeoffApplies = hasEarthworkTakeoff(takeoff);
 
@@ -174,6 +186,16 @@ export default async function FieldPage({
               yd3PerTripPrivatePavement: project.yd3PerTripPrivatePavement,
               concreteYd3PublicPavement: project.concreteYd3PublicPavement,
               yd3PerTripPublicPavement: project.yd3PerTripPublicPavement,
+              masonryLoadBearingCmuSf: project.masonryLoadBearingCmuSf,
+              masonrySfPerTripLoadBearingCmu:
+                project.masonrySfPerTripLoadBearingCmu,
+              masonryElevatorBuildingCount:
+                project.masonryElevatorBuildingCount,
+              masonryElevatorShaftHeightFt:
+                project.masonryElevatorShaftHeightFt,
+              masonryFtPerTripElevatorShaft:
+                project.masonryFtPerTripElevatorShaft,
+              masonryCmuEnclosureCount: project.masonryCmuEnclosureCount,
             }}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -258,6 +280,7 @@ export default async function FieldPage({
             const isConcrete = isConcreteTestingReinforcingParent(
               parent.catalog.name
             );
+            const isMasonry = isMasonryTestingParent(parent.catalog.name);
             const displayDrivers =
               isEarthwork && takeoffApplies && n(drivers.trips) === 0
                 ? { ...drivers, trips: suggestion.total }
@@ -269,7 +292,11 @@ export default async function FieldPage({
                       concreteTakeoffApplies &&
                       n(drivers.trips) === 0
                     ? { ...drivers, trips: concreteSuggestion.total }
-                    : drivers;
+                    : isMasonry &&
+                        masonryTakeoffApplies &&
+                        n(drivers.trips) === 0
+                      ? { ...drivers, trips: masonrySuggestion.total }
+                      : drivers;
 
             return (
               <section
@@ -416,6 +443,45 @@ export default async function FieldPage({
                   </div>
                 )}
 
+                {isMasonry && (
+                  <div className="mb-4 space-y-2">
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                      <p className="font-medium">
+                        {masonryLabels.loadBearingCmu}
+                      </p>
+                      <p className="mt-1 text-xs text-amber-900/80">
+                        Rule A — Load-bearing CMU wall: 1 trip /{" "}
+                        {DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING.toLocaleString()}{" "}
+                        SF or less; trips = ceil(SF / divisor).
+                      </p>
+                    </div>
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                      <p className="font-medium">
+                        {masonryLabels.elevatorShaft}
+                      </p>
+                      <p className="mt-1 text-xs text-amber-900/80">
+                        Rule B — Multifamily elevator shaft CMU: buildings with
+                        elevator × ceil(shaft height ft /{" "}
+                        {DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT}) (height is
+                        per building).
+                      </p>
+                    </div>
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                      <p className="font-medium">{masonryLabels.enclosure}</p>
+                      <p className="mt-1 text-xs text-amber-900/80">
+                        Rule C — Dumpster and/or equipment CMU enclosures: 1 trip
+                        each. Apply suggestions sets Trips and cascades Masonry
+                        Testing / Vehicle. Numbers stay editable.
+                      </p>
+                    </div>
+                    {masonryLabels.combined && (
+                      <div className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-950">
+                        {masonryLabels.combined}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <form
                   action={updateParentDrivers.bind(null, id, parent.id)}
                   className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8"
@@ -490,6 +556,16 @@ export default async function FieldPage({
           {DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT}). A/B use min{" "}
           {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS} when volume &gt; 0; C is ceil only.
           Total = A + B + private + public.
+        </p>
+      )}
+
+      {hasMasonryTesting && !masonryTakeoffApplies && (
+        <p className="mt-4 text-xs text-slate-500">
+          Tip: for Masonry Testing &amp; Observations, enter load-bearing CMU SF
+          (default {DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING.toLocaleString()}{" "}
+          SF/trip), multifamily elevator building count + shaft height ft/building
+          (default {DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT} ft/trip), and/or
+          CMU enclosure count (1 trip each). Total = A + B + C.
         </p>
       )}
     </div>

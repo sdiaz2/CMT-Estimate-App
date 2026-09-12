@@ -41,6 +41,12 @@ export type ProjectTakeoff = {
   concreteYd3PublicPavement?: number | null;
   yd3PerTripPublicPavement?: number | null;
   // Future pour types (walls, etc.) get their own yd³ + divisor fields here.
+  masonryLoadBearingCmuSf?: number | null;
+  masonrySfPerTripLoadBearingCmu?: number | null;
+  masonryElevatorBuildingCount?: number | null;
+  masonryElevatorShaftHeightFt?: number | null;
+  masonryFtPerTripElevatorShaft?: number | null;
+  masonryCmuEnclosureCount?: number | null;
 };
 
 /**
@@ -847,6 +853,233 @@ export function isConcreteTestingReinforcingParent(name: string): boolean {
   return lower.includes("concrete testing") && lower.includes("reinforcing");
 }
 
+
+export const MASONRY_HOURS_PER_TRIP = 4;
+
+export const DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING = 5000;
+export const DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT = 16;
+
+/**
+ * Suggested masonry trips breakdown.
+ * total = loadBearingCmuTrips + elevatorShaftTrips + enclosureTrips
+ */
+export type MasonryTripSuggestion = {
+  loadBearingCmuTrips: number;
+  elevatorShaftTrips: number;
+  enclosureTrips: number;
+  total: number;
+};
+
+/**
+ * Masonry Testing & Observations — trip rules:
+ *
+ * Rule A — Load-bearing CMU wall:
+ *   ceil(masonryLoadBearingCmuSf / masonrySfPerTripLoadBearingCmu) — default 5000
+ *
+ * Rule B — Multifamily elevator shaft CMU (per building with an elevator):
+ *   when buildingCount > 0 and shaftHeightFt > 0:
+ *     buildingCount * ceil(shaftHeightFt / masonryFtPerTripElevatorShaft) — default 16
+ *   Fields: masonryElevatorBuildingCount, masonryElevatorShaftHeightFt (height per building)
+ *
+ * Rule C — Dumpster and/or equipment CMU enclosures:
+ *   trips = masonryCmuEnclosureCount (1 trip each)
+ *
+ * total = A + B + C
+ *
+ * Example: 12000 SF LB CMU → 3; 2 buildings × 48 ft @ 16 → 6; 3 enclosures → 3; total 12.
+ */
+export function suggestMasonryTrips(
+  takeoff: ProjectTakeoff | null | undefined
+): MasonryTripSuggestion {
+  const loadBearingSf = n(takeoff?.masonryLoadBearingCmuSf, 0);
+  const loadBearingDivisor =
+    n(takeoff?.masonrySfPerTripLoadBearingCmu, 0) > 0
+      ? n(takeoff?.masonrySfPerTripLoadBearingCmu)
+      : DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING;
+  const loadBearingCmuTrips = ceilTrips(loadBearingSf, loadBearingDivisor);
+
+  const buildingCount = Math.max(
+    0,
+    Math.floor(n(takeoff?.masonryElevatorBuildingCount, 0))
+  );
+  const shaftHeightFt = n(takeoff?.masonryElevatorShaftHeightFt, 0);
+  const shaftDivisor =
+    n(takeoff?.masonryFtPerTripElevatorShaft, 0) > 0
+      ? n(takeoff?.masonryFtPerTripElevatorShaft)
+      : DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT;
+  const elevatorShaftTrips =
+    buildingCount > 0 && shaftHeightFt > 0 && shaftDivisor > 0
+      ? buildingCount * Math.ceil(shaftHeightFt / shaftDivisor)
+      : 0;
+
+  const enclosureTrips = Math.max(
+    0,
+    Math.floor(n(takeoff?.masonryCmuEnclosureCount, 0))
+  );
+
+  return {
+    loadBearingCmuTrips,
+    elevatorShaftTrips,
+    enclosureTrips,
+    total: loadBearingCmuTrips + elevatorShaftTrips + enclosureTrips,
+  };
+}
+
+export function hasMasonryTakeoff(
+  takeoff: ProjectTakeoff | null | undefined
+): boolean {
+  return suggestMasonryTrips(takeoff).total > 0;
+}
+
+export function masonryTripRuleLabels(
+  takeoff: ProjectTakeoff | null | undefined
+): {
+  loadBearingCmu?: string;
+  elevatorShaft?: string;
+  enclosure?: string;
+  combined?: string;
+} {
+  const loadBearingSf = n(takeoff?.masonryLoadBearingCmuSf, 0);
+  const loadBearingDivisor =
+    n(takeoff?.masonrySfPerTripLoadBearingCmu, 0) > 0
+      ? n(takeoff?.masonrySfPerTripLoadBearingCmu)
+      : DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING;
+  const buildingCount = Math.max(
+    0,
+    Math.floor(n(takeoff?.masonryElevatorBuildingCount, 0))
+  );
+  const shaftHeightFt = n(takeoff?.masonryElevatorShaftHeightFt, 0);
+  const shaftDivisor =
+    n(takeoff?.masonryFtPerTripElevatorShaft, 0) > 0
+      ? n(takeoff?.masonryFtPerTripElevatorShaft)
+      : DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT;
+  const enclosureCount = Math.max(
+    0,
+    Math.floor(n(takeoff?.masonryCmuEnclosureCount, 0))
+  );
+  const suggestion = suggestMasonryTrips(takeoff);
+  const out: {
+    loadBearingCmu?: string;
+    elevatorShaft?: string;
+    enclosure?: string;
+    combined?: string;
+  } = {};
+
+  if (loadBearingSf > 0) {
+    out.loadBearingCmu = `Load-bearing CMU: 1 trip / ${loadBearingDivisor.toLocaleString()} SF → ${suggestion.loadBearingCmuTrips} trips from ${loadBearingSf.toLocaleString()} SF`;
+  } else {
+    out.loadBearingCmu = `Load-bearing CMU wall: 1 trip / ${loadBearingDivisor.toLocaleString()} SF or less (default 5,000). Enter SF to suggest trips.`;
+  }
+
+  if (buildingCount > 0 && shaftHeightFt > 0) {
+    out.elevatorShaft = `Elevator shaft CMU: ${buildingCount} building(s) × ceil(${shaftHeightFt.toLocaleString()} ft / ${shaftDivisor}) = ${suggestion.elevatorShaftTrips} trips (1 trip / ${shaftDivisor} ft height per building with elevator)`;
+  } else {
+    out.elevatorShaft = `Multifamily elevator shaft CMU: buildings with elevator × ceil(shaft height ft / ${shaftDivisor}) — default 16 ft/trip. Enter building count and shaft height (per building) to suggest trips.`;
+  }
+
+  if (enclosureCount > 0) {
+    out.enclosure = `CMU enclosures (dumpster/equipment): ${enclosureCount} enclosure(s) → ${suggestion.enclosureTrips} trips (1 trip each)`;
+  } else {
+    out.enclosure = `Dumpster and/or equipment CMU enclosures: 1 trip each. Enter enclosure count to suggest trips.`;
+  }
+
+  const parts: string[] = [];
+  if (suggestion.loadBearingCmuTrips > 0)
+    parts.push(`${suggestion.loadBearingCmuTrips} load-bearing CMU`);
+  if (suggestion.elevatorShaftTrips > 0)
+    parts.push(`${suggestion.elevatorShaftTrips} elevator shaft`);
+  if (suggestion.enclosureTrips > 0)
+    parts.push(`${suggestion.enclosureTrips} enclosure`);
+  if (parts.length > 1) {
+    out.combined = `Combined masonry: ${parts.join(" + ")} = ${suggestion.total} trips`;
+  } else if (suggestion.total > 0) {
+    out.combined = `Total suggested masonry trips: ${suggestion.total}`;
+  }
+
+  return out;
+}
+
+export function masonryTripRuleLabel(
+  takeoff: ProjectTakeoff | null | undefined
+): string {
+  const labels = masonryTripRuleLabels(takeoff);
+  return [
+    labels.loadBearingCmu,
+    labels.elevatorShaft,
+    labels.enclosure,
+    labels.combined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+export function applyMasonryTakeoffToDrivers(
+  drivers: Drivers,
+  takeoff: ProjectTakeoff | null | undefined
+): Drivers {
+  const suggestion = suggestMasonryTrips(takeoff);
+  if (suggestion.total <= 0) return { ...drivers };
+
+  const trips = suggestion.total;
+  const hours = trips * MASONRY_HOURS_PER_TRIP;
+  const otHours = Math.round(hours * 0.15 * 10) / 10;
+
+  const loadBearingSf = n(takeoff?.masonryLoadBearingCmuSf, 0);
+  const loadBearingDivisor =
+    n(takeoff?.masonrySfPerTripLoadBearingCmu, 0) > 0
+      ? n(takeoff?.masonrySfPerTripLoadBearingCmu)
+      : DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING;
+  const buildingCount = Math.max(
+    0,
+    Math.floor(n(takeoff?.masonryElevatorBuildingCount, 0))
+  );
+  const shaftHeightFt = n(takeoff?.masonryElevatorShaftHeightFt, 0);
+  const shaftDivisor =
+    n(takeoff?.masonryFtPerTripElevatorShaft, 0) > 0
+      ? n(takeoff?.masonryFtPerTripElevatorShaft)
+      : DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT;
+  const enclosureCount = Math.max(
+    0,
+    Math.floor(n(takeoff?.masonryCmuEnclosureCount, 0))
+  );
+
+  const noteParts: string[] = [];
+  if (suggestion.loadBearingCmuTrips > 0) {
+    noteParts.push(
+      `load-bearing CMU ceil(${loadBearingSf} / ${loadBearingDivisor}) = ${suggestion.loadBearingCmuTrips}`
+    );
+  }
+  if (suggestion.elevatorShaftTrips > 0) {
+    noteParts.push(
+      `elevator shaft ${buildingCount} × ceil(${shaftHeightFt} / ${shaftDivisor}) = ${suggestion.elevatorShaftTrips}`
+    );
+  }
+  if (suggestion.enclosureTrips > 0) {
+    noteParts.push(`enclosures ${enclosureCount} = ${suggestion.enclosureTrips}`);
+  }
+  const notesDefault =
+    noteParts.length > 1
+      ? `From takeoff: ${noteParts.join(" + ")} = ${trips} trips`
+      : `From takeoff: ${noteParts.join("; ")} trips`;
+
+  return {
+    ...drivers,
+    trips,
+    hours,
+    otHours,
+    days: trips,
+    vehicleTrips: trips,
+    notes:
+      typeof drivers.notes === "string" && drivers.notes.trim()
+        ? drivers.notes
+        : notesDefault,
+  };
+}
+
+export function isMasonryTestingParent(name: string): boolean {
+  return name.toLowerCase().includes("masonry testing");
+}
+
 export function suggestFieldLines(
   parentName: string,
   drivers: Drivers,
@@ -865,6 +1098,11 @@ export function suggestFieldLines(
     hasConcreteTakeoff(takeoff)
   ) {
     d = applyConcreteTakeoffToDrivers(drivers, takeoff);
+  } else if (
+    isMasonryTestingParent(parentName) &&
+    hasMasonryTakeoff(takeoff)
+  ) {
+    d = applyMasonryTakeoffToDrivers(drivers, takeoff);
   }
 
   const trips = n(d.trips, 0);
@@ -1133,6 +1371,12 @@ export function takeoffFromProject(project: {
   yd3PerTripPrivatePavement?: number | null;
   concreteYd3PublicPavement?: number | null;
   yd3PerTripPublicPavement?: number | null;
+  masonryLoadBearingCmuSf?: number | null;
+  masonrySfPerTripLoadBearingCmu?: number | null;
+  masonryElevatorBuildingCount?: number | null;
+  masonryElevatorShaftHeightFt?: number | null;
+  masonryFtPerTripElevatorShaft?: number | null;
+  masonryCmuEnclosureCount?: number | null;
 }): ProjectTakeoff {
   return {
     buildingAreaSf: project.buildingAreaSf ?? null,
@@ -1174,5 +1418,15 @@ export function takeoffFromProject(project: {
     concreteYd3PublicPavement: project.concreteYd3PublicPavement ?? null,
     yd3PerTripPublicPavement:
       project.yd3PerTripPublicPavement ?? DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT,
+    masonryLoadBearingCmuSf: project.masonryLoadBearingCmuSf ?? null,
+    masonrySfPerTripLoadBearingCmu:
+      project.masonrySfPerTripLoadBearingCmu ??
+      DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING,
+    masonryElevatorBuildingCount: project.masonryElevatorBuildingCount ?? null,
+    masonryElevatorShaftHeightFt: project.masonryElevatorShaftHeightFt ?? null,
+    masonryFtPerTripElevatorShaft:
+      project.masonryFtPerTripElevatorShaft ??
+      DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
+    masonryCmuEnclosureCount: project.masonryCmuEnclosureCount ?? null,
   };
 }

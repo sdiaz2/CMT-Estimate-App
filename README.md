@@ -203,6 +203,56 @@ Separate takeoff fields for private vs public pavement. **No minimum-2** — onl
 
 Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Concrete Testing parent.
 
+
+### Masonry Testing & Observations — trip suggestions
+
+Parent: **Masonry Testing & Observations**. Apply suggestions sets **Trips** and cascades Masonry Testing hours (~4 hr/trip) and Vehicle — same pattern as other field parents.
+
+**`total = loadBearingCmuTrips + elevatorShaftTrips + enclosureTrips`**
+
+#### Rule A — Load-bearing CMU wall
+
+| Input | Notes |
+|-------|--------|
+| Load-bearing CMU wall (SF) | `masonryLoadBearingCmuSf` |
+| SF per trip | Editable; **default 5,000** (`masonrySfPerTripLoadBearingCmu`) — one trip for every 5,000 SF or less |
+
+**Formula:** `loadBearingCmuTrips = ceil(masonryLoadBearingCmuSf / masonrySfPerTripLoadBearingCmu)`
+
+**Example:** 12,000 SF @ 5,000 → **3 trips**
+
+#### Rule B — Multifamily elevator shaft CMU
+
+One trip for every 16 feet of elevator shaft CMU wall height, **for each building with an elevator**. Height is per building (not a project-wide total).
+
+| Input | Notes |
+|-------|--------|
+| Buildings with elevator | `masonryElevatorBuildingCount` |
+| Elevator shaft CMU height (ft per building) | `masonryElevatorShaftHeightFt` |
+| ft per trip | Editable; **default 16** (`masonryFtPerTripElevatorShaft`) |
+
+**Formula (when building count > 0 and height > 0):**
+
+`elevatorShaftTrips = masonryElevatorBuildingCount × ceil(masonryElevatorShaftHeightFt / masonryFtPerTripElevatorShaft)`
+
+**Example:** 2 buildings × 48 ft @ 16 → 2 × 3 = **6 trips**
+
+#### Rule C — Dumpster and/or equipment CMU enclosures
+
+| Input | Notes |
+|-------|--------|
+| CMU enclosure count | `masonryCmuEnclosureCount` |
+
+**Formula:** `enclosureTrips = masonryCmuEnclosureCount` (1 trip each)
+
+**Example:** 3 enclosures → **3 trips**
+
+#### Combined example
+
+12,000 SF LB CMU (3) + 2 buildings × 48 ft shaft (6) + 3 enclosures (3) → **12 trips** total.
+
+Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Masonry Testing parent.
+
 ## Assumptions
 
 - Heuristic suggestions never lock numbers

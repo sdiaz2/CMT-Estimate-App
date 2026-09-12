@@ -111,6 +111,31 @@ Sidewalk trips are **added** into the Earthwork Testing total with building + pa
 
 Utility trench trips are **added** into the Earthwork Testing total with building + pavement + sidewalk.
 
+
+### CIP Deep Foundations (Drilled Straight Shaft Piers) — trip suggestions
+
+Parent: **CIP Deep Foundations (Drilled Straight Shaft Piers)**. Apply suggestions sets **Trips** and cascades Foundation Inspection hours (~4 hr/trip), OT (~15%), and Vehicle — same pattern as other field parents.
+
+#### Priority
+
+1. **Construction schedule provided** (`foundationScheduleTrips` > 0): use that trip count. Do **not** also apply pier-count rules.
+2. **No schedule trips** (null/0): `trips = ceil(pierCount / piersPerTrip)` for the selected pier type.
+
+#### Pier types & divisors (editable)
+
+| Pier type (`pierType`) | Default piers/trip | Typical range |
+|------------------------|--------------------|---------------|
+| `straight_shaft` | **10.5** (`piersPerTripStraight`) | 9–12 |
+| `cased` | **5** (`piersPerTripCased`) | 4–6 |
+| `belled` (underreamed) | **7** (`piersPerTripBelled`) | 5–9 |
+
+#### Examples
+
+- 36 straight-shaft piers @ 10.5 → **4 trips**
+- Schedule **6** trips entered → **6 trips** (overrides pier count even if pier count is filled)
+
+Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the CIP Deep Foundations parent.
+
 ## Assumptions
 
 - Heuristic suggestions never lock numbers

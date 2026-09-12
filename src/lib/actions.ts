@@ -5,15 +5,22 @@ import { redirect } from "next/navigation";
 import { prisma } from "./prisma";
 import {
   applyEarthworkTakeoffToDrivers,
+  applyFoundationTakeoffToDrivers,
   DEFAULT_EARTHWORK_SF_PER_TRIP,
   DEFAULT_PAVEMENT_LF_PER_TRIP,
   DEFAULT_PAVEMENT_SF_PER_TRIP,
+  DEFAULT_PIERS_PER_TRIP_BELLED,
+  DEFAULT_PIERS_PER_TRIP_CASED,
+  DEFAULT_PIERS_PER_TRIP_STRAIGHT,
   DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   hasEarthworkTakeoff,
+  hasFoundationTakeoff,
+  isCipDeepFoundationsParent,
   isEarthworkTestingParent,
   missCheckPrompts,
+  normalizePierType,
   parseDrivers,
   parseHints,
   suggestFieldLines,
@@ -48,6 +55,14 @@ function takeoffDataFromForm(formData: FormData) {
     formData,
     "utilityTrenchLfPerTrip"
   );
+  const foundationScheduleTripsRaw = parseOptionalFloat(
+    formData,
+    "foundationScheduleTrips"
+  );
+  const pierCountRaw = parseOptionalFloat(formData, "pierCount");
+  const piersStraightRaw = parseOptionalFloat(formData, "piersPerTripStraight");
+  const piersCasedRaw = parseOptionalFloat(formData, "piersPerTripCased");
+  const piersBelledRaw = parseOptionalFloat(formData, "piersPerTripBelled");
   return {
     buildingAreaSf,
     moistureConditionedSubgrade: parseCheckbox(formData, "moistureConditionedSubgrade"),
@@ -90,6 +105,27 @@ function takeoffDataFromForm(formData: FormData) {
       utilityTrenchLfPerTripRaw !== null && utilityTrenchLfPerTripRaw > 0
         ? utilityTrenchLfPerTripRaw
         : DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
+    foundationScheduleTrips:
+      foundationScheduleTripsRaw !== null && foundationScheduleTripsRaw > 0
+        ? Math.floor(foundationScheduleTripsRaw)
+        : null,
+    pierCount:
+      pierCountRaw !== null && pierCountRaw > 0
+        ? Math.floor(pierCountRaw)
+        : null,
+    pierType: normalizePierType(formData.get("pierType")),
+    piersPerTripStraight:
+      piersStraightRaw !== null && piersStraightRaw > 0
+        ? piersStraightRaw
+        : DEFAULT_PIERS_PER_TRIP_STRAIGHT,
+    piersPerTripCased:
+      piersCasedRaw !== null && piersCasedRaw > 0
+        ? piersCasedRaw
+        : DEFAULT_PIERS_PER_TRIP_CASED,
+    piersPerTripBelled:
+      piersBelledRaw !== null && piersBelledRaw > 0
+        ? piersBelledRaw
+        : DEFAULT_PIERS_PER_TRIP_BELLED,
   };
 }
 
@@ -239,6 +275,15 @@ export async function applyFieldSuggestions(projectId: string, parentId: string)
       where: { id: parentId },
       data: { drivers: JSON.stringify(drivers) },
     });
+  } else if (
+    isCipDeepFoundationsParent(parent.catalog.name) &&
+    hasFoundationTakeoff(takeoff)
+  ) {
+    drivers = applyFoundationTakeoffToDrivers(drivers, takeoff);
+    await prisma.projectParent.update({
+      where: { id: parentId },
+      data: { drivers: JSON.stringify(drivers) },
+    });
   }
 
   const suggestions = suggestFieldLines(parent.catalog.name, drivers, takeoff);
@@ -279,6 +324,15 @@ export async function applyAllFieldSuggestions(projectId: string) {
       hasEarthworkTakeoff(takeoff)
     ) {
       drivers = applyEarthworkTakeoffToDrivers(drivers, takeoff);
+      await prisma.projectParent.update({
+        where: { id: parent.id },
+        data: { drivers: JSON.stringify(drivers) },
+      });
+    } else if (
+      isCipDeepFoundationsParent(parent.catalog.name) &&
+      hasFoundationTakeoff(takeoff)
+    ) {
+      drivers = applyFoundationTakeoffToDrivers(drivers, takeoff);
       await prisma.projectParent.update({
         where: { id: parent.id },
         data: { drivers: JSON.stringify(drivers) },

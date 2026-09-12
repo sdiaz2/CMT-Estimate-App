@@ -2,10 +2,17 @@ import {
   DEFAULT_EARTHWORK_SF_PER_TRIP,
   DEFAULT_PAVEMENT_LF_PER_TRIP,
   DEFAULT_PAVEMENT_SF_PER_TRIP,
+  DEFAULT_PIERS_PER_TRIP_BELLED,
+  DEFAULT_PIERS_PER_TRIP_CASED,
+  DEFAULT_PIERS_PER_TRIP_STRAIGHT,
   DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
+  normalizePierType,
+  pierTypeLabel,
   suggestEarthworkTrips,
+  suggestFoundationTrips,
+  type PierType,
 } from "@/lib/heuristics";
 
 export type TakeoffFactsValues = {
@@ -27,6 +34,12 @@ export type TakeoffFactsValues = {
   sidewalkBunchedLfPerTrip?: number | null;
   utilityTrenchLf?: number | null;
   utilityTrenchLfPerTrip?: number | null;
+  foundationScheduleTrips?: number | null;
+  pierCount?: number | null;
+  pierType?: string | null;
+  piersPerTripStraight?: number | null;
+  piersPerTripCased?: number | null;
+  piersPerTripBelled?: number | null;
 };
 
 /** Shared Takeoff / Project facts fields (used inside a parent <form>). */
@@ -61,6 +74,19 @@ export function TakeoffFactsFields({
     values?.utilityTrenchLfPerTrip && values.utilityTrenchLfPerTrip > 0
       ? values.utilityTrenchLfPerTrip
       : DEFAULT_UTILITY_TRENCH_LF_PER_TRIP;
+  const pierType = normalizePierType(values?.pierType);
+  const piersStraightDivisor =
+    values?.piersPerTripStraight && values.piersPerTripStraight > 0
+      ? values.piersPerTripStraight
+      : DEFAULT_PIERS_PER_TRIP_STRAIGHT;
+  const piersCasedDivisor =
+    values?.piersPerTripCased && values.piersPerTripCased > 0
+      ? values.piersPerTripCased
+      : DEFAULT_PIERS_PER_TRIP_CASED;
+  const piersBelledDivisor =
+    values?.piersPerTripBelled && values.piersPerTripBelled > 0
+      ? values.piersPerTripBelled
+      : DEFAULT_PIERS_PER_TRIP_BELLED;
   const limeTreated = !!values?.limeTreatedPavementSubgrade;
   const sidewalksBunched = !!values?.sidewalksBunchedTogether;
 
@@ -85,6 +111,15 @@ export function TakeoffFactsFields({
   const pavementLf = values?.pavementSubgradeLf ?? 0;
   const sidewalkLf = values?.sidewalkLf ?? 0;
   const utilityTrenchLf = values?.utilityTrenchLf ?? 0;
+  const foundationSuggestion = suggestFoundationTrips({
+    foundationScheduleTrips: values?.foundationScheduleTrips,
+    pierCount: values?.pierCount,
+    pierType,
+    piersPerTripStraight: piersStraightDivisor,
+    piersPerTripCased: piersCasedDivisor,
+    piersPerTripBelled: piersBelledDivisor,
+  });
+  const showFoundation = foundationSuggestion.trips > 0;
   const showBuilding = (buildingSf ?? 0) > 0;
   const showPavement =
     limeTreated ? (pavementSf ?? 0) > 0 : (pavementLf ?? 0) > 0;
@@ -409,6 +444,146 @@ export function TakeoffFactsFields({
             </span>
           </label>
         </div>
+      </div>
+
+      <div className="border-t border-slate-200 pt-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          CIP Deep Foundations (Drilled Straight Shaft Piers)
+        </p>
+        <p className="mb-3 text-xs text-slate-500">
+          If a construction schedule is provided, enter schedule trips — that
+          count overrides pier-count rules. Otherwise trips = ceil(pier count /
+          piers per trip) by pier type: straight-shaft default{" "}
+          <strong>{DEFAULT_PIERS_PER_TRIP_STRAIGHT}</strong> (typical 9–12),
+          cased <strong>{DEFAULT_PIERS_PER_TRIP_CASED}</strong> (4–6), belled{" "}
+          <strong>{DEFAULT_PIERS_PER_TRIP_BELLED}</strong> (5–9).
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Schedule trips (optional)
+            </span>
+            <input
+              name="foundationScheduleTrips"
+              type="number"
+              step="1"
+              min="0"
+              defaultValue={
+                values?.foundationScheduleTrips != null &&
+                values.foundationScheduleTrips > 0
+                  ? String(values.foundationScheduleTrips)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 6 — overrides pier rules when set"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              Leave blank / 0 to use pier-count rules
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Pier count
+            </span>
+            <input
+              name="pierCount"
+              type="number"
+              step="1"
+              min="0"
+              defaultValue={
+                values?.pierCount != null && values.pierCount > 0
+                  ? String(values.pierCount)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 36"
+            />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="text-sm font-medium text-slate-700">
+              Pier type
+            </span>
+            <select
+              name="pierType"
+              defaultValue={pierType}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="straight_shaft">
+                Straight-shaft (1 trip / ~9–12 piers)
+              </option>
+              <option value="cased">Cased (1 trip / ~4–6 piers)</option>
+              <option value="belled">
+                Belled / underreamed (1 trip / ~5–9 piers)
+              </option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Straight-shaft piers per trip
+            </span>
+            <input
+              name="piersPerTripStraight"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(piersStraightDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              typical 9–12 (default mid 10.5)
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Cased piers per trip
+            </span>
+            <input
+              name="piersPerTripCased"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(piersCasedDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              typical 4–6 (default 5)
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Belled / underreamed piers per trip
+            </span>
+            <input
+              name="piersPerTripBelled"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(piersBelledDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              typical 5–9 (default 7)
+            </span>
+          </label>
+        </div>
+        {showFoundation && (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            {foundationSuggestion.source === "schedule" ? (
+              <p>
+                Schedule:{" "}
+                <strong>{foundationSuggestion.trips} trips</strong> (overrides
+                pier-count rules)
+              </p>
+            ) : (
+              <p>
+                {pierTypeLabel(pierType as PierType)}: ceil(
+                {foundationSuggestion.pierCount} /{" "}
+                {foundationSuggestion.piersPerTrip}) ={" "}
+                <strong>{foundationSuggestion.trips} trips</strong>
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {(showBuilding || showPavement || showSidewalk || showUtilityTrench) && (

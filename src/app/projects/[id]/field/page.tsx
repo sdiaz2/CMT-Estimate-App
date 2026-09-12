@@ -16,14 +16,21 @@ import {
   DEFAULT_EARTHWORK_SF_PER_TRIP,
   DEFAULT_PAVEMENT_LF_PER_TRIP,
   DEFAULT_PAVEMENT_SF_PER_TRIP,
+  DEFAULT_PIERS_PER_TRIP_BELLED,
+  DEFAULT_PIERS_PER_TRIP_CASED,
+  DEFAULT_PIERS_PER_TRIP_STRAIGHT,
   DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   earthworkTripRuleLabels,
+  foundationTripRuleLabel,
   hasEarthworkTakeoff,
+  hasFoundationTakeoff,
+  isCipDeepFoundationsParent,
   isEarthworkTestingParent,
   parseDrivers,
   suggestEarthworkTrips,
+  suggestFoundationTrips,
   takeoffFromProject,
 } from "@/lib/heuristics";
 
@@ -62,6 +69,9 @@ export default async function FieldPage({
   const takeoff = takeoffFromProject(project);
   const suggestion = suggestEarthworkTrips(takeoff);
   const labels = earthworkTripRuleLabels(takeoff);
+  const foundationSuggestion = suggestFoundationTrips(takeoff);
+  const foundationLabel = foundationTripRuleLabel(takeoff);
+  const foundationTakeoffApplies = hasFoundationTakeoff(takeoff);
   const buildingSf = takeoff.buildingAreaSf ?? 0;
   const pavementSf = takeoff.pavementAreaSf ?? 0;
   const pavementLf = takeoff.pavementSubgradeLf ?? 0;
@@ -72,6 +82,9 @@ export default async function FieldPage({
     !!takeoff.moistureConditionedSubgrade && !!takeoff.flexibleBaseCap;
   const hasEarthworkTesting = fieldParents.some((p) =>
     isEarthworkTestingParent(p.catalog.name)
+  );
+  const hasCipDeepFoundations = fieldParents.some((p) =>
+    isCipDeepFoundationsParent(p.catalog.name)
   );
   const takeoffApplies = hasEarthworkTakeoff(takeoff);
 
@@ -130,6 +143,12 @@ export default async function FieldPage({
               sidewalkBunchedLfPerTrip: project.sidewalkBunchedLfPerTrip,
               utilityTrenchLf: project.utilityTrenchLf,
               utilityTrenchLfPerTrip: project.utilityTrenchLfPerTrip,
+              foundationScheduleTrips: project.foundationScheduleTrips,
+              pierCount: project.pierCount,
+              pierType: project.pierType,
+              piersPerTripStraight: project.piersPerTripStraight,
+              piersPerTripCased: project.piersPerTripCased,
+              piersPerTripBelled: project.piersPerTripBelled,
             }}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -141,8 +160,17 @@ export default async function FieldPage({
             </button>
             {takeoffApplies && (
               <p className="text-xs text-slate-600">
-                Preview total: <strong>{suggestion.total} trips</strong>
+                Earthwork preview: <strong>{suggestion.total} trips</strong>
                 {labels.combined ? ` — ${labels.combined}` : ""}
+              </p>
+            )}
+            {foundationTakeoffApplies && (
+              <p className="text-xs text-slate-600">
+                Foundation preview:{" "}
+                <strong>{foundationSuggestion.trips} trips</strong>
+                {foundationSuggestion.source === "schedule"
+                  ? " (from schedule)"
+                  : " (from pier count)"}
               </p>
             )}
           </div>
@@ -162,10 +190,15 @@ export default async function FieldPage({
             const drivers = parseDrivers(parent.drivers);
             const fieldLines = parent.lineItems.filter((l) => !l.isLab);
             const isEarthwork = isEarthworkTestingParent(parent.catalog.name);
+            const isFoundation = isCipDeepFoundationsParent(parent.catalog.name);
             const displayDrivers =
               isEarthwork && takeoffApplies && n(drivers.trips) === 0
                 ? { ...drivers, trips: suggestion.total }
-                : drivers;
+                : isFoundation &&
+                    foundationTakeoffApplies &&
+                    n(drivers.trips) === 0
+                  ? { ...drivers, trips: foundationSuggestion.trips }
+                  : drivers;
 
             return (
               <section
@@ -244,6 +277,20 @@ export default async function FieldPage({
                   </div>
                 )}
 
+                {isFoundation && (
+                  <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <p className="font-medium">{foundationLabel}</p>
+                    <p className="mt-1 text-xs text-amber-900/80">
+                      Schedule trips override pier-count rules when set (&gt;0).
+                      Straight-shaft default {DEFAULT_PIERS_PER_TRIP_STRAIGHT}{" "}
+                      piers/trip (9–12); cased {DEFAULT_PIERS_PER_TRIP_CASED}{" "}
+                      (4–6); belled {DEFAULT_PIERS_PER_TRIP_BELLED} (5–9). Apply
+                      suggestions sets Trips and cascades Foundation Inspection /
+                      OT / Vehicle. Numbers stay editable.
+                    </p>
+                  </div>
+                )}
+
                 <form
                   action={updateParentDrivers.bind(null, id, parent.id)}
                   className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8"
@@ -296,6 +343,15 @@ export default async function FieldPage({
           {DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP}/{DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP}{" "}
           LF; utility trench {DEFAULT_UTILITY_TRENCH_LF_PER_TRIP} LF. Trips are
           summed.
+        </p>
+      )}
+
+      {hasCipDeepFoundations && !foundationTakeoffApplies && (
+        <p className="mt-4 text-xs text-slate-500">
+          Tip: for CIP Deep Foundations, enter schedule trips (overrides pier
+          rules) or pier count + type. Defaults: straight-shaft{" "}
+          {DEFAULT_PIERS_PER_TRIP_STRAIGHT} piers/trip; cased{" "}
+          {DEFAULT_PIERS_PER_TRIP_CASED}; belled {DEFAULT_PIERS_PER_TRIP_BELLED}.
         </p>
       )}
     </div>

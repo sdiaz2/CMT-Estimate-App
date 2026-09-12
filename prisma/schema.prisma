@@ -73,6 +73,18 @@ model Project {
   utilityTrenchLf             Float?
   /// LF of utility trench per earthwork trip (typical 150–175; default mid 162.5)
   utilityTrenchLfPerTrip      Float    @default(162.5)
+  /// Optional schedule-provided trip count for CIP Deep Foundations (null/0 = none; overrides pier rules)
+  foundationScheduleTrips     Int?
+  /// Number of drilled piers for CIP Deep Foundations trip rule
+  pierCount                   Int?
+  /// Pier type: straight_shaft | cased | belled
+  pierType                    String   @default("straight_shaft")
+  /// Piers per trip for straight-shaft (typical 9–12; default mid 10.5)
+  piersPerTripStraight        Float    @default(10.5)
+  /// Piers per trip for cased piers (typical 4–6; default 5)
+  piersPerTripCased           Float    @default(5)
+  /// Piers per trip for belled/underreamed (typical 5–9; default 7)
+  piersPerTripBelled          Float    @default(7)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
   parents                     ProjectParent[]

@@ -26,6 +26,12 @@ export type ProjectTakeoff = {
   sidewalkBunchedLfPerTrip?: number | null;
   utilityTrenchLf?: number | null;
   utilityTrenchLfPerTrip?: number | null;
+  foundationScheduleTrips?: number | null;
+  pierCount?: number | null;
+  pierType?: PierType | string | null;
+  piersPerTripStraight?: number | null;
+  piersPerTripCased?: number | null;
+  piersPerTripBelled?: number | null;
 };
 
 /**
@@ -373,6 +379,176 @@ export function isEarthworkTestingParent(name: string): boolean {
   return name.toLowerCase().includes("earthwork testing");
 }
 
+export const FOUNDATION_HOURS_PER_TRIP = 4;
+
+export const PIER_TYPES = ["straight_shaft", "cased", "belled"] as const;
+export type PierType = (typeof PIER_TYPES)[number];
+
+export const DEFAULT_PIERS_PER_TRIP_STRAIGHT = 10.5;
+export const PIERS_PER_TRIP_STRAIGHT_RANGE = { min: 9, max: 12 } as const;
+
+export const DEFAULT_PIERS_PER_TRIP_CASED = 5;
+export const PIERS_PER_TRIP_CASED_RANGE = { min: 4, max: 6 } as const;
+
+export const DEFAULT_PIERS_PER_TRIP_BELLED = 7;
+export const PIERS_PER_TRIP_BELLED_RANGE = { min: 5, max: 9 } as const;
+
+export type FoundationTripSuggestion = {
+  trips: number;
+  source: "schedule" | "piers" | "none";
+  pierType: PierType;
+  pierCount: number;
+  piersPerTrip: number;
+  scheduleTrips: number;
+};
+
+export function normalizePierType(raw: unknown): PierType {
+  const s = String(raw ?? "straight_shaft").toLowerCase().trim();
+  if (s === "cased") return "cased";
+  if (s === "belled" || s === "underreamed" || s === "belled_underreamed")
+    return "belled";
+  return "straight_shaft";
+}
+
+export function piersPerTripForType(
+  takeoff: ProjectTakeoff | null | undefined,
+  pierType?: PierType
+): number {
+  const type = pierType ?? normalizePierType(takeoff?.pierType);
+  if (type === "cased") {
+    return n(takeoff?.piersPerTripCased, 0) > 0
+      ? n(takeoff?.piersPerTripCased)
+      : DEFAULT_PIERS_PER_TRIP_CASED;
+  }
+  if (type === "belled") {
+    return n(takeoff?.piersPerTripBelled, 0) > 0
+      ? n(takeoff?.piersPerTripBelled)
+      : DEFAULT_PIERS_PER_TRIP_BELLED;
+  }
+  return n(takeoff?.piersPerTripStraight, 0) > 0
+    ? n(takeoff?.piersPerTripStraight)
+    : DEFAULT_PIERS_PER_TRIP_STRAIGHT;
+}
+
+/**
+ * CIP Deep Foundations (Drilled Straight Shaft Piers) trip rules:
+ *
+ * 1. If foundationScheduleTrips > 0 → use schedule trips (do NOT also apply pier-count rules).
+ * 2. Else if pierCount > 0 → trips = ceil(pierCount / piersPerTrip) for selected pier type:
+ *    - straight_shaft: default 10.5 (typical 9–12)
+ *    - cased: default 5 (typical 4–6)
+ *    - belled: default 7 (typical 5–9)
+ *
+ * Example: 36 straight piers @ 10.5 → 4 trips; schedule 6 trips overrides.
+ */
+export function suggestFoundationTrips(
+  takeoff: ProjectTakeoff | null | undefined
+): FoundationTripSuggestion {
+  const scheduleTrips = Math.max(0, Math.floor(n(takeoff?.foundationScheduleTrips, 0)));
+  const pierCount = Math.max(0, Math.floor(n(takeoff?.pierCount, 0)));
+  const pierType = normalizePierType(takeoff?.pierType);
+  const piersPerTrip = piersPerTripForType(takeoff, pierType);
+
+  if (scheduleTrips > 0) {
+    return {
+      trips: scheduleTrips,
+      source: "schedule",
+      pierType,
+      pierCount,
+      piersPerTrip,
+      scheduleTrips,
+    };
+  }
+
+  if (pierCount > 0 && piersPerTrip > 0) {
+    return {
+      trips: ceilTrips(pierCount, piersPerTrip),
+      source: "piers",
+      pierType,
+      pierCount,
+      piersPerTrip,
+      scheduleTrips: 0,
+    };
+  }
+
+  return {
+    trips: 0,
+    source: "none",
+    pierType,
+    pierCount,
+    piersPerTrip,
+    scheduleTrips: 0,
+  };
+}
+
+export function hasFoundationTakeoff(
+  takeoff: ProjectTakeoff | null | undefined
+): boolean {
+  return suggestFoundationTrips(takeoff).trips > 0;
+}
+
+export function pierTypeLabel(pierType: PierType): string {
+  if (pierType === "cased") return "cased";
+  if (pierType === "belled") return "belled/underreamed";
+  return "straight-shaft";
+}
+
+export function pierTypeRangeHelp(pierType: PierType): string {
+  if (pierType === "cased") return "typical 4–6";
+  if (pierType === "belled") return "typical 5–9";
+  return "typical 9–12";
+}
+
+export function foundationTripRuleLabel(
+  takeoff: ProjectTakeoff | null | undefined
+): string {
+  const suggestion = suggestFoundationTrips(takeoff);
+  if (suggestion.source === "schedule") {
+    return `CIP Deep Foundations: construction schedule provides ${suggestion.trips} trips (overrides pier-count rules).`;
+  }
+  if (suggestion.source === "piers") {
+    return `CIP Deep Foundations (${pierTypeLabel(suggestion.pierType)}): 1 trip / ${suggestion.piersPerTrip} piers → ${suggestion.trips} trips from ${suggestion.pierCount} piers (${pierTypeRangeHelp(suggestion.pierType)}).`;
+  }
+  return `CIP Deep Foundations: enter schedule trips, or pier count + type (straight-shaft default ${DEFAULT_PIERS_PER_TRIP_STRAIGHT}/trip; cased ${DEFAULT_PIERS_PER_TRIP_CASED}; belled ${DEFAULT_PIERS_PER_TRIP_BELLED}). Schedule trips override pier rules when set.`;
+}
+
+export function applyFoundationTakeoffToDrivers(
+  drivers: Drivers,
+  takeoff: ProjectTakeoff | null | undefined
+): Drivers {
+  const suggestion = suggestFoundationTrips(takeoff);
+  if (suggestion.trips <= 0) return { ...drivers };
+
+  const trips = suggestion.trips;
+  const hours = trips * FOUNDATION_HOURS_PER_TRIP;
+  const otHours = Math.round(hours * 0.15 * 10) / 10;
+
+  let notesDefault: string;
+  if (suggestion.source === "schedule") {
+    notesDefault = `From construction schedule: ${trips} trips`;
+  } else {
+    notesDefault = `From takeoff: ceil(${suggestion.pierCount} / ${suggestion.piersPerTrip}) ${pierTypeLabel(suggestion.pierType)} piers = ${trips} trips`;
+  }
+
+  return {
+    ...drivers,
+    trips,
+    hours,
+    otHours,
+    days: trips,
+    vehicleTrips: trips,
+    notes:
+      typeof drivers.notes === "string" && drivers.notes.trim()
+        ? drivers.notes
+        : notesDefault,
+  };
+}
+
+export function isCipDeepFoundationsParent(name: string): boolean {
+  const n = name.toLowerCase();
+  return n.includes("cip deep") || n.includes("deep foundations");
+}
+
 export function suggestFieldLines(
   parentName: string,
   drivers: Drivers,
@@ -381,6 +557,11 @@ export function suggestFieldLines(
   let d = drivers;
   if (isEarthworkTestingParent(parentName) && hasEarthworkTakeoff(takeoff)) {
     d = applyEarthworkTakeoffToDrivers(drivers, takeoff);
+  } else if (
+    isCipDeepFoundationsParent(parentName) &&
+    hasFoundationTakeoff(takeoff)
+  ) {
+    d = applyFoundationTakeoffToDrivers(drivers, takeoff);
   }
 
   const trips = n(d.trips, 0);
@@ -635,6 +816,12 @@ export function takeoffFromProject(project: {
   sidewalkBunchedLfPerTrip?: number | null;
   utilityTrenchLf?: number | null;
   utilityTrenchLfPerTrip?: number | null;
+  foundationScheduleTrips?: number | null;
+  pierCount?: number | null;
+  pierType?: string | null;
+  piersPerTripStraight?: number | null;
+  piersPerTripCased?: number | null;
+  piersPerTripBelled?: number | null;
 }): ProjectTakeoff {
   return {
     buildingAreaSf: project.buildingAreaSf ?? null,
@@ -655,5 +842,13 @@ export function takeoffFromProject(project: {
     utilityTrenchLf: project.utilityTrenchLf ?? null,
     utilityTrenchLfPerTrip:
       project.utilityTrenchLfPerTrip ?? DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
+    foundationScheduleTrips: project.foundationScheduleTrips ?? null,
+    pierCount: project.pierCount ?? null,
+    pierType: normalizePierType(project.pierType),
+    piersPerTripStraight:
+      project.piersPerTripStraight ?? DEFAULT_PIERS_PER_TRIP_STRAIGHT,
+    piersPerTripCased: project.piersPerTripCased ?? DEFAULT_PIERS_PER_TRIP_CASED,
+    piersPerTripBelled:
+      project.piersPerTripBelled ?? DEFAULT_PIERS_PER_TRIP_BELLED,
   };
 }

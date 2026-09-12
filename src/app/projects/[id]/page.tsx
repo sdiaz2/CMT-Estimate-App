@@ -93,6 +93,12 @@ export default async function ProjectSetupPage({
               sidewalkBunchedLfPerTrip: project.sidewalkBunchedLfPerTrip,
               utilityTrenchLf: project.utilityTrenchLf,
               utilityTrenchLfPerTrip: project.utilityTrenchLfPerTrip,
+              foundationScheduleTrips: project.foundationScheduleTrips,
+              pierCount: project.pierCount,
+              pierType: project.pierType,
+              piersPerTripStraight: project.piersPerTripStraight,
+              piersPerTripCased: project.piersPerTripCased,
+              piersPerTripBelled: project.piersPerTripBelled,
             }}
           />
         </div>

@@ -4,6 +4,7 @@ import {
   DEFAULT_PAVEMENT_SF_PER_TRIP,
   DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
+  DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   suggestEarthworkTrips,
 } from "@/lib/heuristics";
 
@@ -24,6 +25,8 @@ export type TakeoffFactsValues = {
   sidewalksBunchedTogether?: boolean;
   sidewalkSpreadLfPerTrip?: number | null;
   sidewalkBunchedLfPerTrip?: number | null;
+  utilityTrenchLf?: number | null;
+  utilityTrenchLfPerTrip?: number | null;
 };
 
 /** Shared Takeoff / Project facts fields (used inside a parent <form>). */
@@ -54,6 +57,10 @@ export function TakeoffFactsFields({
     values?.sidewalkBunchedLfPerTrip && values.sidewalkBunchedLfPerTrip > 0
       ? values.sidewalkBunchedLfPerTrip
       : DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP;
+  const utilityTrenchDivisor =
+    values?.utilityTrenchLfPerTrip && values.utilityTrenchLfPerTrip > 0
+      ? values.utilityTrenchLfPerTrip
+      : DEFAULT_UTILITY_TRENCH_LF_PER_TRIP;
   const limeTreated = !!values?.limeTreatedPavementSubgrade;
   const sidewalksBunched = !!values?.sidewalksBunchedTogether;
 
@@ -69,16 +76,20 @@ export function TakeoffFactsFields({
     sidewalksBunchedTogether: sidewalksBunched,
     sidewalkSpreadLfPerTrip: sidewalkSpreadDivisor,
     sidewalkBunchedLfPerTrip: sidewalkBunchedDivisor,
+    utilityTrenchLf: values?.utilityTrenchLf,
+    utilityTrenchLfPerTrip: utilityTrenchDivisor,
   });
 
   const buildingSf = values?.buildingAreaSf ?? 0;
   const pavementSf = values?.pavementAreaSf ?? 0;
   const pavementLf = values?.pavementSubgradeLf ?? 0;
   const sidewalkLf = values?.sidewalkLf ?? 0;
+  const utilityTrenchLf = values?.utilityTrenchLf ?? 0;
   const showBuilding = (buildingSf ?? 0) > 0;
   const showPavement =
     limeTreated ? (pavementSf ?? 0) > 0 : (pavementLf ?? 0) > 0;
   const showSidewalk = (sidewalkLf ?? 0) > 0;
+  const showUtilityTrench = (utilityTrenchLf ?? 0) > 0;
 
   return (
     <div className={compact ? "space-y-3" : "space-y-4"}>
@@ -88,15 +99,17 @@ export function TakeoffFactsFields({
         </h3>
         <p className="mt-0.5 text-xs text-slate-500">
           Earthwork trips = building + pavement (lime SF <em>or</em> non-lime LF) +
-          sidewalks. Building default{" "}
+          sidewalks + utility trench. Building default{" "}
           <strong>{DEFAULT_EARTHWORK_SF_PER_TRIP.toLocaleString()}</strong>{" "}
           SF/trip; lime pavement{" "}
           <strong>{DEFAULT_PAVEMENT_SF_PER_TRIP.toLocaleString()}</strong>{" "}
           SF/trip; non-lime pavement{" "}
           <strong>{DEFAULT_PAVEMENT_LF_PER_TRIP}</strong> LF/trip; sidewalks{" "}
           <strong>{DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP}</strong> LF (spread) /{" "}
-          <strong>{DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP}</strong> LF (bunched).
-          Suggestions never lock — edit freely after Apply.
+          <strong>{DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP}</strong> LF (bunched);
+          utility trench{" "}
+          <strong>{DEFAULT_UTILITY_TRENCH_LF_PER_TRIP}</strong> LF/trip (typical
+          150–175). Suggestions never lock — edit freely after Apply.
         </p>
       </div>
 
@@ -353,7 +366,52 @@ export function TakeoffFactsFields({
         </div>
       </div>
 
-      {(showBuilding || showPavement || showSidewalk) && (
+      <div className="border-t border-slate-200 pt-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          Utility trench backfill
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Utility trench length (LF)
+            </span>
+            <input
+              name="utilityTrenchLf"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.utilityTrenchLf != null
+                  ? String(values.utilityTrenchLf)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 800"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              storm / sewer / water trench
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Utility trench LF per trip
+            </span>
+            <input
+              name="utilityTrenchLfPerTrip"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(utilityTrenchDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              typical 150–175 (default mid 162.5)
+            </span>
+          </label>
+        </div>
+      </div>
+
+      {(showBuilding || showPavement || showSidewalk || showUtilityTrench) && (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
           {showBuilding && (
             <p>
@@ -391,9 +449,27 @@ export function TakeoffFactsFields({
               ) = <strong>{suggestion.sidewalkTrips} trips</strong>
             </p>
           )}
+          {showUtilityTrench && (
+            <p
+              className={
+                showBuilding || showPavement || showSidewalk
+                  ? "mt-1"
+                  : undefined
+              }
+            >
+              Utility trench: ceil(
+              {Number(utilityTrenchLf).toLocaleString()} /{" "}
+              {utilityTrenchDivisor.toLocaleString()}) ={" "}
+              <strong>{suggestion.utilityTrenchTrips} trips</strong>
+            </p>
+          )}
           {(
-            [showBuilding, showPavement, showSidewalk].filter(Boolean).length >
-            1
+            [
+              showBuilding,
+              showPavement,
+              showSidewalk,
+              showUtilityTrench,
+            ].filter(Boolean).length > 1
           ) && (
             <p className="mt-1 font-medium">
               Combined:{" "}
@@ -401,6 +477,7 @@ export function TakeoffFactsFields({
                 showBuilding ? suggestion.buildingTrips : null,
                 showPavement ? suggestion.pavementTrips : null,
                 showSidewalk ? suggestion.sidewalkTrips : null,
+                showUtilityTrench ? suggestion.utilityTrenchTrips : null,
               ]
                 .filter((x) => x != null)
                 .join(" + ")}{" "}

@@ -24,13 +24,16 @@ export type ProjectTakeoff = {
   sidewalksBunchedTogether?: boolean;
   sidewalkSpreadLfPerTrip?: number | null;
   sidewalkBunchedLfPerTrip?: number | null;
+  utilityTrenchLf?: number | null;
+  utilityTrenchLfPerTrip?: number | null;
 };
 
 /**
  * Suggested earthwork trips breakdown.
  * pavementTrips is either lime SF or non-lime LF — never both.
  * sidewalkTrips uses spread (125) or bunched (150) divisor.
- * total = buildingTrips + pavementTrips + sidewalkTrips
+ * utilityTrenchTrips = ceil(utilityTrenchLf / utilityTrenchLfPerTrip) — default 162.5 (150–175).
+ * total = buildingTrips + pavementTrips + sidewalkTrips + utilityTrenchTrips
  */
 export type EarthworkTripSuggestion = {
   buildingTrips: number;
@@ -38,6 +41,7 @@ export type EarthworkTripSuggestion = {
   pavementSfTrips: number;
   pavementLfTrips: number;
   sidewalkTrips: number;
+  utilityTrenchTrips: number;
   limeTreated: boolean;
   sidewalksBunched: boolean;
   total: number;
@@ -56,6 +60,9 @@ export const PAVEMENT_LF_PER_TRIP_RANGE = { min: 200, max: 400 } as const;
 
 export const DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP = 125;
 export const DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP = 150;
+
+export const DEFAULT_UTILITY_TRENCH_LF_PER_TRIP = 162.5;
+export const UTILITY_TRENCH_LF_PER_TRIP_RANGE = { min: 150, max: 175 } as const;
 
 function n(v: unknown, fallback = 0): number {
   const x = typeof v === "number" ? v : Number(v);
@@ -80,9 +87,13 @@ function ceilTrips(amount: number, divisor: number): number {
  *   spread (default) → ceil(sidewalkLf / sidewalkSpreadLfPerTrip) — default 125
  *   bunched          → ceil(sidewalkLf / sidewalkBunchedLfPerTrip) — default 150
  *
- * total = building + pavement + sidewalk
+ * Utility trench backfill (storm/sewer/water):
+ *   ceil(utilityTrenchLf / utilityTrenchLfPerTrip) — default 162.5 (typical 150–175)
  *
- * Example (lime): 100k SF building @ 2850 → 36; 150k SF pavement @ 27500 → 6; combined 42 (+ sidewalk if any).
+ * total = building + pavement + sidewalk + utilityTrench
+ *
+ * Example (lime): 100k SF building @ 2850 → 36; 150k SF pavement @ 27500 → 6; combined 42 (+ sidewalk / trench if any).
+ * Example trench: 800 LF @ 162.5 → 5 trips.
  */
 export function suggestEarthworkTrips(
   takeoff: ProjectTakeoff | null | undefined
@@ -125,15 +136,23 @@ export function suggestEarthworkTrips(
   const pavementTrips = limeTreated ? pavementSfTrips : pavementLfTrips;
   const sidewalkTrips = ceilTrips(sidewalkLf, sidewalkDivisor);
 
+  const utilityTrenchLf = n(takeoff?.utilityTrenchLf, 0);
+  const utilityTrenchDivisor =
+    n(takeoff?.utilityTrenchLfPerTrip, 0) > 0
+      ? n(takeoff?.utilityTrenchLfPerTrip)
+      : DEFAULT_UTILITY_TRENCH_LF_PER_TRIP;
+  const utilityTrenchTrips = ceilTrips(utilityTrenchLf, utilityTrenchDivisor);
+
   return {
     buildingTrips,
     pavementTrips,
     pavementSfTrips,
     pavementLfTrips,
     sidewalkTrips,
+    utilityTrenchTrips,
     limeTreated,
     sidewalksBunched,
-    total: buildingTrips + pavementTrips + sidewalkTrips,
+    total: buildingTrips + pavementTrips + sidewalkTrips + utilityTrenchTrips,
   };
 }
 
@@ -142,6 +161,7 @@ export function hasEarthworkTakeoff(
 ): boolean {
   if (n(takeoff?.buildingAreaSf, 0) > 0) return true;
   if (n(takeoff?.sidewalkLf, 0) > 0) return true;
+  if (n(takeoff?.utilityTrenchLf, 0) > 0) return true;
   if (takeoff?.limeTreatedPavementSubgrade) {
     return n(takeoff?.pavementAreaSf, 0) > 0;
   }
@@ -154,6 +174,7 @@ export function earthworkTripRuleLabels(
   building?: string;
   pavement?: string;
   sidewalk?: string;
+  utilityTrench?: string;
   combined?: string;
 } {
   const buildingSf = n(takeoff?.buildingAreaSf, 0);
@@ -181,12 +202,18 @@ export function earthworkTripRuleLabels(
     : n(takeoff?.sidewalkSpreadLfPerTrip, 0) > 0
       ? n(takeoff?.sidewalkSpreadLfPerTrip)
       : DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP;
+  const utilityTrenchLf = n(takeoff?.utilityTrenchLf, 0);
+  const utilityTrenchDivisor =
+    n(takeoff?.utilityTrenchLfPerTrip, 0) > 0
+      ? n(takeoff?.utilityTrenchLfPerTrip)
+      : DEFAULT_UTILITY_TRENCH_LF_PER_TRIP;
 
   const suggestion = suggestEarthworkTrips(takeoff);
   const out: {
     building?: string;
     pavement?: string;
     sidewalk?: string;
+    utilityTrench?: string;
     combined?: string;
   } = {};
 
@@ -215,6 +242,12 @@ export function earthworkTripRuleLabels(
     out.sidewalk = `Sidewalks: spread default 1 / 125 LF; bunched 1 / 150 LF. Enter sidewalk LF to suggest trips.`;
   }
 
+  if (utilityTrenchLf > 0) {
+    out.utilityTrench = `Utility trench backfill: 1 trip / ${utilityTrenchDivisor.toLocaleString()} LF → ${suggestion.utilityTrenchTrips} trips from ${utilityTrenchLf.toLocaleString()} LF (typical 150–175)`;
+  } else {
+    out.utilityTrench = `Utility trench backfill (storm/sewer/water): 1 trip / ${utilityTrenchDivisor.toLocaleString()} LF (typical 150–175). Enter utility trench LF to suggest trips.`;
+  }
+
   const parts: string[] = [];
   if (suggestion.buildingTrips > 0) parts.push(`${suggestion.buildingTrips} building`);
   if (suggestion.pavementTrips > 0) {
@@ -223,6 +256,8 @@ export function earthworkTripRuleLabels(
     );
   }
   if (suggestion.sidewalkTrips > 0) parts.push(`${suggestion.sidewalkTrips} sidewalk`);
+  if (suggestion.utilityTrenchTrips > 0)
+    parts.push(`${suggestion.utilityTrenchTrips} utility trench`);
   if (parts.length > 1) {
     out.combined = `Combined: ${parts.join(" + ")} = ${suggestion.total} trips`;
   } else if (suggestion.total > 0) {
@@ -236,7 +271,13 @@ export function earthworkTripRuleLabel(
   takeoff: ProjectTakeoff | null | undefined
 ): string {
   const labels = earthworkTripRuleLabels(takeoff);
-  return [labels.building, labels.pavement, labels.sidewalk, labels.combined]
+  return [
+    labels.building,
+    labels.pavement,
+    labels.sidewalk,
+    labels.utilityTrench,
+    labels.combined,
+  ]
     .filter(Boolean)
     .join(" · ");
 }
@@ -275,6 +316,11 @@ export function applyEarthworkTakeoffToDrivers(
     : n(takeoff?.sidewalkSpreadLfPerTrip, 0) > 0
       ? n(takeoff?.sidewalkSpreadLfPerTrip)
       : DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP;
+  const utilityTrenchLf = n(takeoff?.utilityTrenchLf, 0);
+  const utilityTrenchDivisor =
+    n(takeoff?.utilityTrenchLfPerTrip, 0) > 0
+      ? n(takeoff?.utilityTrenchLfPerTrip)
+      : DEFAULT_UTILITY_TRENCH_LF_PER_TRIP;
 
   const noteParts: string[] = [];
   if (suggestion.buildingTrips > 0) {
@@ -296,6 +342,11 @@ export function applyEarthworkTakeoffToDrivers(
   if (suggestion.sidewalkTrips > 0) {
     noteParts.push(
       `sidewalk ceil(${sidewalkLf} / ${sidewalkDivisor}) = ${suggestion.sidewalkTrips}`
+    );
+  }
+  if (suggestion.utilityTrenchTrips > 0) {
+    noteParts.push(
+      `utility trench ceil(${utilityTrenchLf} / ${utilityTrenchDivisor}) = ${suggestion.utilityTrenchTrips}`
     );
   }
   const notesDefault =
@@ -582,6 +633,8 @@ export function takeoffFromProject(project: {
   sidewalksBunchedTogether?: boolean;
   sidewalkSpreadLfPerTrip?: number | null;
   sidewalkBunchedLfPerTrip?: number | null;
+  utilityTrenchLf?: number | null;
+  utilityTrenchLfPerTrip?: number | null;
 }): ProjectTakeoff {
   return {
     buildingAreaSf: project.buildingAreaSf ?? null,
@@ -599,5 +652,8 @@ export function takeoffFromProject(project: {
       project.sidewalkSpreadLfPerTrip ?? DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
     sidewalkBunchedLfPerTrip:
       project.sidewalkBunchedLfPerTrip ?? DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
+    utilityTrenchLf: project.utilityTrenchLf ?? null,
+    utilityTrenchLfPerTrip:
+      project.utilityTrenchLfPerTrip ?? DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   };
 }

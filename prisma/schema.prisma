@@ -69,6 +69,10 @@ model Project {
   sidewalkSpreadLfPerTrip     Float    @default(125)
   /// LF per trip when sidewalks are bunched together (default 150)
   sidewalkBunchedLfPerTrip    Float    @default(150)
+  /// Utility trench backfill length (LF) for storm/sewer/water trench earthwork trips
+  utilityTrenchLf             Float?
+  /// LF of utility trench per earthwork trip (typical 150–175; default mid 162.5)
+  utilityTrenchLfPerTrip      Float    @default(162.5)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
   parents                     ProjectParent[]

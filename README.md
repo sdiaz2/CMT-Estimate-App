@@ -44,9 +44,9 @@ Re-key into Pricing Tool and enter rates there. Admin support note (8%) is a rem
 
 Suggested earthwork trips are the **sum** of applicable parts:
 
-**`total = buildingTrips + pavementTrips + sidewalkTrips`**
+**`total = buildingTrips + pavementTrips + sidewalkTrips + utilityTrenchTrips`**
 
-UI shows each part of the formula (building / pavement / sidewalk) plus the combined total. If only some takeoffs are filled, only those parts contribute. Apply suggestions uses **total** trips, then cascades hours (~4 hr/trip), OT (~15%), gauge days, and vehicle trips. Numbers stay fully editable afterward.
+UI shows each part of the formula (building / pavement / sidewalk / utility trench) plus the combined total. If only some takeoffs are filled, only those parts contribute. Apply suggestions uses **total** trips, then cascades hours (~4 hr/trip), OT (~15%), gauge days, and vehicle trips. Numbers stay fully editable afterward.
 
 #### 1. Building — moisture-conditioned subgrade + flexible base cap
 
@@ -97,6 +97,19 @@ Flags `moistureConditionedSubgrade` and `flexibleBaseCap` document that the job 
 - **Bunched together:** `sidewalkTrips = ceil(sidewalkLf / sidewalkBunchedLfPerTrip)` (default 150)
 
 Sidewalk trips are **added** into the Earthwork Testing total with building + pavement.
+
+#### 4. Utility trench backfill (storm / sewer / water)
+
+| Input | Notes |
+|-------|--------|
+| Utility trench length (LF) | `utilityTrenchLf` |
+| LF per trip | Editable; **typical 150–175**; **default mid 162.5** |
+
+**Formula:** `utilityTrenchTrips = ceil(utilityTrenchLf / utilityTrenchLfPerTrip)` when LF > 0
+
+**Example:** 800 LF @ 162.5 → **5 trips**.
+
+Utility trench trips are **added** into the Earthwork Testing total with building + pavement + sidewalk.
 
 ## Assumptions
 

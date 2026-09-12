@@ -91,6 +91,8 @@ export default async function ProjectSetupPage({
               sidewalksBunchedTogether: project.sidewalksBunchedTogether,
               sidewalkSpreadLfPerTrip: project.sidewalkSpreadLfPerTrip,
               sidewalkBunchedLfPerTrip: project.sidewalkBunchedLfPerTrip,
+              utilityTrenchLf: project.utilityTrenchLf,
+              utilityTrenchLfPerTrip: project.utilityTrenchLfPerTrip,
             }}
           />
         </div>

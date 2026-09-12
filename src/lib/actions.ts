@@ -10,6 +10,7 @@ import {
   DEFAULT_PAVEMENT_SF_PER_TRIP,
   DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
+  DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   hasEarthworkTakeoff,
   isEarthworkTestingParent,
   missCheckPrompts,
@@ -42,6 +43,11 @@ function takeoffDataFromForm(formData: FormData) {
   const sidewalkLf = parseOptionalFloat(formData, "sidewalkLf");
   const sidewalkSpreadRaw = parseOptionalFloat(formData, "sidewalkSpreadLfPerTrip");
   const sidewalkBunchedRaw = parseOptionalFloat(formData, "sidewalkBunchedLfPerTrip");
+  const utilityTrenchLf = parseOptionalFloat(formData, "utilityTrenchLf");
+  const utilityTrenchLfPerTripRaw = parseOptionalFloat(
+    formData,
+    "utilityTrenchLfPerTrip"
+  );
   return {
     buildingAreaSf,
     moistureConditionedSubgrade: parseCheckbox(formData, "moistureConditionedSubgrade"),
@@ -79,6 +85,11 @@ function takeoffDataFromForm(formData: FormData) {
       sidewalkBunchedRaw !== null && sidewalkBunchedRaw > 0
         ? sidewalkBunchedRaw
         : DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
+    utilityTrenchLf,
+    utilityTrenchLfPerTrip:
+      utilityTrenchLfPerTripRaw !== null && utilityTrenchLfPerTripRaw > 0
+        ? utilityTrenchLfPerTripRaw
+        : DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   };
 }
 

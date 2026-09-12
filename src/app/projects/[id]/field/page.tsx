@@ -18,6 +18,7 @@ import {
   DEFAULT_PAVEMENT_SF_PER_TRIP,
   DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
+  DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   earthworkTripRuleLabels,
   hasEarthworkTakeoff,
   isEarthworkTestingParent,
@@ -65,6 +66,7 @@ export default async function FieldPage({
   const pavementSf = takeoff.pavementAreaSf ?? 0;
   const pavementLf = takeoff.pavementSubgradeLf ?? 0;
   const sidewalkLf = takeoff.sidewalkLf ?? 0;
+  const utilityTrenchLf = takeoff.utilityTrenchLf ?? 0;
   const limeTreated = !!takeoff.limeTreatedPavementSubgrade;
   const ruleAppliesBuilding =
     !!takeoff.moistureConditionedSubgrade && !!takeoff.flexibleBaseCap;
@@ -126,6 +128,8 @@ export default async function FieldPage({
               sidewalksBunchedTogether: project.sidewalksBunchedTogether,
               sidewalkSpreadLfPerTrip: project.sidewalkSpreadLfPerTrip,
               sidewalkBunchedLfPerTrip: project.sidewalkBunchedLfPerTrip,
+              utilityTrenchLf: project.utilityTrenchLf,
+              utilityTrenchLfPerTrip: project.utilityTrenchLfPerTrip,
             }}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -218,6 +222,16 @@ export default async function FieldPage({
                         </p>
                       </div>
                     )}
+                    {(utilityTrenchLf > 0 || !takeoffApplies) && (
+                      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                        <p className="font-medium">{labels.utilityTrench}</p>
+                        <p className="mt-1 text-xs text-amber-900/80">
+                          Storm/sewer/water trench backfill: default{" "}
+                          {DEFAULT_UTILITY_TRENCH_LF_PER_TRIP} LF/trip (typical
+                          150–175, editable).
+                        </p>
+                      </div>
+                    )}
                     {labels.combined && (
                       <div className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-950">
                         {labels.combined}
@@ -274,13 +288,14 @@ export default async function FieldPage({
 
       {hasEarthworkTesting && !takeoffApplies && (
         <p className="mt-4 text-xs text-slate-500">
-          Tip: enter building SF, pavement (lime SF or non-lime LF), and/or
-          sidewalk LF in Takeoff above. Defaults: building{" "}
+          Tip: enter building SF, pavement (lime SF or non-lime LF), sidewalk LF,
+          and/or utility trench LF in Takeoff above. Defaults: building{" "}
           {DEFAULT_EARTHWORK_SF_PER_TRIP.toLocaleString()} SF/trip; lime pavement{" "}
           {DEFAULT_PAVEMENT_SF_PER_TRIP.toLocaleString()} SF/trip; non-lime{" "}
           {DEFAULT_PAVEMENT_LF_PER_TRIP} LF/trip; sidewalks{" "}
           {DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP}/{DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP}{" "}
-          LF. Trips are summed.
+          LF; utility trench {DEFAULT_UTILITY_TRENCH_LF_PER_TRIP} LF. Trips are
+          summed.
         </p>
       )}
     </div>

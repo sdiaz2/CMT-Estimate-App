@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ParentTaskCatalog {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  sortOrder      Int
+  category       String   @default("field")
+  relatedHints   String   @default("[]")
+  defaultDrivers String   @default("{}")
+  lineTemplates  LineTemplate[]
+  projectParents ProjectParent[]
+}
+
+model LineTemplate {
+  id              String @id @default(cuid())
+  catalogId       String
+  catalog         ParentTaskCatalog @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+  description     String
+  units           String
+  isLab           Boolean @default(false)
+  includesOT      Boolean @default(false)
+  includesVehicle Boolean @default(false)
+  sortOrder       Int     @default(0)
+  qtyHint         String  @default("")
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  name         String
+  location     String   @default("")
+  notes        String   @default("")
+  docsReceived String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  parents      ProjectParent[]
+}
+
+model ProjectParent {
+  id        String @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  catalogId String
+  catalog   ParentTaskCatalog @relation(fields: [catalogId], references: [id])
+  sortOrder Int    @default(0)
+  drivers   String @default("{}")
+  lineItems LineItem[]
+
+  @@unique([projectId, catalogId])
+}
+
+model LineItem {
+  id              String  @id @default(cuid())
+  projectParentId String
+  projectParent   ProjectParent @relation(fields: [projectParentId], references: [id], onDelete: Cascade)
+  description     String
+  quantity        Float   @default(0)
+  units           String
+  trips           Float?
+  isLab           Boolean @default(false)
+  sortOrder       Int     @default(0)
+  notes           String  @default("")
+  rateDisplay     Float?
+}

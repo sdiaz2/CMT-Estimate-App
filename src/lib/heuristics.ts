@@ -9,77 +9,299 @@ export type SuggestedLine = {
   notes?: string;
 };
 
-/** Project takeoff facts used by earthwork trip rule. */
+/** Project takeoff facts used by earthwork trip rules. */
 export type ProjectTakeoff = {
   buildingAreaSf?: number | null;
   moistureConditionedSubgrade?: boolean;
   flexibleBaseCap?: boolean;
   earthworkSfPerTrip?: number | null;
+  pavementAreaSf?: number | null;
+  limeTreatedPavementSubgrade?: boolean;
+  pavementSfPerTrip?: number | null;
+  pavementSubgradeLf?: number | null;
+  pavementLfPerTrip?: number | null;
+  sidewalkLf?: number | null;
+  sidewalksBunchedTogether?: boolean;
+  sidewalkSpreadLfPerTrip?: number | null;
+  sidewalkBunchedLfPerTrip?: number | null;
 };
 
-/** Typical hours per earthwork testing trip (seed default: 12 trips → 48 hours). */
+/**
+ * Suggested earthwork trips breakdown.
+ * pavementTrips is either lime SF or non-lime LF — never both.
+ * sidewalkTrips uses spread (125) or bunched (150) divisor.
+ * total = buildingTrips + pavementTrips + sidewalkTrips
+ */
+export type EarthworkTripSuggestion = {
+  buildingTrips: number;
+  pavementTrips: number;
+  pavementSfTrips: number;
+  pavementLfTrips: number;
+  sidewalkTrips: number;
+  limeTreated: boolean;
+  sidewalksBunched: boolean;
+  total: number;
+};
+
 export const EARTHWORK_HOURS_PER_TRIP = 4;
 
-/** Default SF per trip (middle of 2700–3000 range). */
 export const DEFAULT_EARTHWORK_SF_PER_TRIP = 2850;
-
 export const EARTHWORK_SF_PER_TRIP_RANGE = { min: 2700, max: 3000 } as const;
+
+export const DEFAULT_PAVEMENT_SF_PER_TRIP = 27500;
+export const PAVEMENT_SF_PER_TRIP_RANGE = { min: 25000, max: 30000 } as const;
+
+export const DEFAULT_PAVEMENT_LF_PER_TRIP = 300;
+export const PAVEMENT_LF_PER_TRIP_RANGE = { min: 200, max: 400 } as const;
+
+export const DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP = 125;
+export const DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP = 150;
 
 function n(v: unknown, fallback = 0): number {
   const x = typeof v === "number" ? v : Number(v);
   return Number.isFinite(x) ? x : fallback;
 }
 
+function ceilTrips(amount: number, divisor: number): number {
+  if (amount <= 0 || divisor <= 0) return 0;
+  return Math.ceil(amount / divisor);
+}
+
 /**
- * Earthwork Testing & Observations trip rule for moisture-conditioned subgrade
- * with flexible base cap:
- *   suggestedTrips = ceil(buildingSF / divisor)
- * Divisor typical range 2700–3000 SF/trip; default 2850.
- * Example: 100,000 SF / 2850 → 36 trips (~34–37 across the range).
+ * Earthwork Testing & Observations trip rules:
+ *
+ * Building: ceil(buildingSF / earthworkSfPerTrip) — default 2850 (2700–3000).
+ *
+ * Pavement (exactly one):
+ *   lime on  → ceil(pavementSF / pavementSfPerTrip) — default 27500 (25000–30000)
+ *   lime off → ceil(pavementSubgradeLf / pavementLfPerTrip) — default 300 (200–400)
+ *
+ * Sidewalks:
+ *   spread (default) → ceil(sidewalkLf / sidewalkSpreadLfPerTrip) — default 125
+ *   bunched          → ceil(sidewalkLf / sidewalkBunchedLfPerTrip) — default 150
+ *
+ * total = building + pavement + sidewalk
+ *
+ * Example (lime): 100k SF building @ 2850 → 36; 150k SF pavement @ 27500 → 6; combined 42 (+ sidewalk if any).
  */
 export function suggestEarthworkTrips(
-  buildingAreaSf: number,
-  earthworkSfPerTrip: number = DEFAULT_EARTHWORK_SF_PER_TRIP
-): number {
-  const sf = n(buildingAreaSf, 0);
-  const divisor = n(earthworkSfPerTrip, DEFAULT_EARTHWORK_SF_PER_TRIP);
-  if (sf <= 0 || divisor <= 0) return 0;
-  return Math.ceil(sf / divisor);
+  takeoff: ProjectTakeoff | null | undefined
+): EarthworkTripSuggestion {
+  const buildingSf = n(takeoff?.buildingAreaSf, 0);
+  const buildingDivisor =
+    n(takeoff?.earthworkSfPerTrip, 0) > 0
+      ? n(takeoff?.earthworkSfPerTrip)
+      : DEFAULT_EARTHWORK_SF_PER_TRIP;
+
+  const limeTreated = !!takeoff?.limeTreatedPavementSubgrade;
+  const pavementSf = n(takeoff?.pavementAreaSf, 0);
+  const pavementSfDivisor =
+    n(takeoff?.pavementSfPerTrip, 0) > 0
+      ? n(takeoff?.pavementSfPerTrip)
+      : DEFAULT_PAVEMENT_SF_PER_TRIP;
+  const pavementLf = n(takeoff?.pavementSubgradeLf, 0);
+  const pavementLfDivisor =
+    n(takeoff?.pavementLfPerTrip, 0) > 0
+      ? n(takeoff?.pavementLfPerTrip)
+      : DEFAULT_PAVEMENT_LF_PER_TRIP;
+
+  const sidewalksBunched = !!takeoff?.sidewalksBunchedTogether;
+  const sidewalkLf = n(takeoff?.sidewalkLf, 0);
+  const sidewalkDivisor = sidewalksBunched
+    ? n(takeoff?.sidewalkBunchedLfPerTrip, 0) > 0
+      ? n(takeoff?.sidewalkBunchedLfPerTrip)
+      : DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP
+    : n(takeoff?.sidewalkSpreadLfPerTrip, 0) > 0
+      ? n(takeoff?.sidewalkSpreadLfPerTrip)
+      : DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP;
+
+  const buildingTrips = ceilTrips(buildingSf, buildingDivisor);
+  const pavementSfTrips = limeTreated
+    ? ceilTrips(pavementSf, pavementSfDivisor)
+    : 0;
+  const pavementLfTrips = !limeTreated
+    ? ceilTrips(pavementLf, pavementLfDivisor)
+    : 0;
+  const pavementTrips = limeTreated ? pavementSfTrips : pavementLfTrips;
+  const sidewalkTrips = ceilTrips(sidewalkLf, sidewalkDivisor);
+
+  return {
+    buildingTrips,
+    pavementTrips,
+    pavementSfTrips,
+    pavementLfTrips,
+    sidewalkTrips,
+    limeTreated,
+    sidewalksBunched,
+    total: buildingTrips + pavementTrips + sidewalkTrips,
+  };
+}
+
+export function hasEarthworkTakeoff(
+  takeoff: ProjectTakeoff | null | undefined
+): boolean {
+  if (n(takeoff?.buildingAreaSf, 0) > 0) return true;
+  if (n(takeoff?.sidewalkLf, 0) > 0) return true;
+  if (takeoff?.limeTreatedPavementSubgrade) {
+    return n(takeoff?.pavementAreaSf, 0) > 0;
+  }
+  return n(takeoff?.pavementSubgradeLf, 0) > 0;
+}
+
+export function earthworkTripRuleLabels(
+  takeoff: ProjectTakeoff | null | undefined
+): {
+  building?: string;
+  pavement?: string;
+  sidewalk?: string;
+  combined?: string;
+} {
+  const buildingSf = n(takeoff?.buildingAreaSf, 0);
+  const buildingDivisor =
+    n(takeoff?.earthworkSfPerTrip, 0) > 0
+      ? n(takeoff?.earthworkSfPerTrip)
+      : DEFAULT_EARTHWORK_SF_PER_TRIP;
+  const limeTreated = !!takeoff?.limeTreatedPavementSubgrade;
+  const pavementSf = n(takeoff?.pavementAreaSf, 0);
+  const pavementSfDivisor =
+    n(takeoff?.pavementSfPerTrip, 0) > 0
+      ? n(takeoff?.pavementSfPerTrip)
+      : DEFAULT_PAVEMENT_SF_PER_TRIP;
+  const pavementLf = n(takeoff?.pavementSubgradeLf, 0);
+  const pavementLfDivisor =
+    n(takeoff?.pavementLfPerTrip, 0) > 0
+      ? n(takeoff?.pavementLfPerTrip)
+      : DEFAULT_PAVEMENT_LF_PER_TRIP;
+  const sidewalksBunched = !!takeoff?.sidewalksBunchedTogether;
+  const sidewalkLf = n(takeoff?.sidewalkLf, 0);
+  const sidewalkDivisor = sidewalksBunched
+    ? n(takeoff?.sidewalkBunchedLfPerTrip, 0) > 0
+      ? n(takeoff?.sidewalkBunchedLfPerTrip)
+      : DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP
+    : n(takeoff?.sidewalkSpreadLfPerTrip, 0) > 0
+      ? n(takeoff?.sidewalkSpreadLfPerTrip)
+      : DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP;
+
+  const suggestion = suggestEarthworkTrips(takeoff);
+  const out: {
+    building?: string;
+    pavement?: string;
+    sidewalk?: string;
+    combined?: string;
+  } = {};
+
+  if (buildingSf > 0) {
+    out.building = `Building: 1 trip / ${buildingDivisor.toLocaleString()} SF → ${suggestion.buildingTrips} trips from ${buildingSf.toLocaleString()} SF (typical 2,700–3,000)`;
+  } else {
+    out.building = `Building: 1 trip / ${buildingDivisor.toLocaleString()} SF (typical 2,700–3,000). Enter building area to suggest trips.`;
+  }
+
+  if (limeTreated) {
+    if (pavementSf > 0) {
+      out.pavement = `Pavement (lime-treated SF): 1 trip / ${pavementSfDivisor.toLocaleString()} SF → ${suggestion.pavementTrips} trips from ${pavementSf.toLocaleString()} SF (typical 25,000–30,000)`;
+    } else {
+      out.pavement = `Pavement (lime-treated SF): 1 trip / ${pavementSfDivisor.toLocaleString()} SF (typical 25,000–30,000). Enter pavement area to suggest trips.`;
+    }
+  } else if (pavementLf > 0) {
+    out.pavement = `Pavement (subgrade LF): 1 trip / ${pavementLfDivisor.toLocaleString()} LF → ${suggestion.pavementTrips} trips from ${pavementLf.toLocaleString()} LF (typical 200–400)`;
+  } else {
+    out.pavement = `Pavement (subgrade LF, no lime): 1 trip / ${pavementLfDivisor.toLocaleString()} LF (typical 200–400). Enter pavement subgrade LF — or turn on lime-treated to use the SF rule.`;
+  }
+
+  if (sidewalkLf > 0) {
+    const mode = sidewalksBunched ? "bunched" : "spread out";
+    out.sidewalk = `Sidewalks (${mode}): 1 trip / ${sidewalkDivisor.toLocaleString()} LF → ${suggestion.sidewalkTrips} trips from ${sidewalkLf.toLocaleString()} LF`;
+  } else {
+    out.sidewalk = `Sidewalks: spread default 1 / 125 LF; bunched 1 / 150 LF. Enter sidewalk LF to suggest trips.`;
+  }
+
+  const parts: string[] = [];
+  if (suggestion.buildingTrips > 0) parts.push(`${suggestion.buildingTrips} building`);
+  if (suggestion.pavementTrips > 0) {
+    parts.push(
+      `${suggestion.pavementTrips} pavement ${limeTreated ? "SF" : "LF"}`
+    );
+  }
+  if (suggestion.sidewalkTrips > 0) parts.push(`${suggestion.sidewalkTrips} sidewalk`);
+  if (parts.length > 1) {
+    out.combined = `Combined: ${parts.join(" + ")} = ${suggestion.total} trips`;
+  } else if (suggestion.total > 0) {
+    out.combined = `Total suggested: ${suggestion.total} trips`;
+  }
+
+  return out;
 }
 
 export function earthworkTripRuleLabel(
-  buildingAreaSf: number,
-  earthworkSfPerTrip: number = DEFAULT_EARTHWORK_SF_PER_TRIP
+  takeoff: ProjectTakeoff | null | undefined
 ): string {
-  const sf = n(buildingAreaSf, 0);
-  const divisor = n(earthworkSfPerTrip, DEFAULT_EARTHWORK_SF_PER_TRIP) || DEFAULT_EARTHWORK_SF_PER_TRIP;
-  const trips = suggestEarthworkTrips(sf, divisor);
-  if (sf <= 0) {
-    return `Rule: 1 trip / ${divisor} SF building (typical 2700–3000). Enter building area to suggest trips.`;
-  }
-  return `Rule: 1 trip / ${divisor} SF building → ${trips} trips from ${sf.toLocaleString()} SF`;
+  const labels = earthworkTripRuleLabels(takeoff);
+  return [labels.building, labels.pavement, labels.sidewalk, labels.combined]
+    .filter(Boolean)
+    .join(" · ");
 }
 
-/**
- * Merge takeoff-based earthwork trips into drivers and cascade hours /
- * gauge / vehicle when trips are suggested from building area.
- */
 export function applyEarthworkTakeoffToDrivers(
   drivers: Drivers,
   takeoff: ProjectTakeoff | null | undefined
 ): Drivers {
-  const sf = n(takeoff?.buildingAreaSf, 0);
-  if (sf <= 0) return { ...drivers };
+  const suggestion = suggestEarthworkTrips(takeoff);
+  if (suggestion.total <= 0) return { ...drivers };
 
-  const divisor =
+  const trips = suggestion.total;
+  const hours = trips * EARTHWORK_HOURS_PER_TRIP;
+  const otHours = Math.round(hours * 0.15 * 10) / 10;
+
+  const buildingSf = n(takeoff?.buildingAreaSf, 0);
+  const buildingDivisor =
     n(takeoff?.earthworkSfPerTrip, 0) > 0
       ? n(takeoff?.earthworkSfPerTrip)
       : DEFAULT_EARTHWORK_SF_PER_TRIP;
-  const trips = suggestEarthworkTrips(sf, divisor);
-  if (trips <= 0) return { ...drivers };
+  const pavementSf = n(takeoff?.pavementAreaSf, 0);
+  const pavementSfDivisor =
+    n(takeoff?.pavementSfPerTrip, 0) > 0
+      ? n(takeoff?.pavementSfPerTrip)
+      : DEFAULT_PAVEMENT_SF_PER_TRIP;
+  const pavementLf = n(takeoff?.pavementSubgradeLf, 0);
+  const pavementLfDivisor =
+    n(takeoff?.pavementLfPerTrip, 0) > 0
+      ? n(takeoff?.pavementLfPerTrip)
+      : DEFAULT_PAVEMENT_LF_PER_TRIP;
+  const sidewalkLf = n(takeoff?.sidewalkLf, 0);
+  const sidewalkDivisor = suggestion.sidewalksBunched
+    ? n(takeoff?.sidewalkBunchedLfPerTrip, 0) > 0
+      ? n(takeoff?.sidewalkBunchedLfPerTrip)
+      : DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP
+    : n(takeoff?.sidewalkSpreadLfPerTrip, 0) > 0
+      ? n(takeoff?.sidewalkSpreadLfPerTrip)
+      : DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP;
 
-  const hours = trips * EARTHWORK_HOURS_PER_TRIP;
-  const otHours = Math.round(hours * 0.15 * 10) / 10;
+  const noteParts: string[] = [];
+  if (suggestion.buildingTrips > 0) {
+    noteParts.push(
+      `building ceil(${buildingSf} / ${buildingDivisor}) = ${suggestion.buildingTrips}`
+    );
+  }
+  if (suggestion.pavementTrips > 0) {
+    if (suggestion.limeTreated) {
+      noteParts.push(
+        `pavement SF ceil(${pavementSf} / ${pavementSfDivisor}) = ${suggestion.pavementTrips}`
+      );
+    } else {
+      noteParts.push(
+        `pavement LF ceil(${pavementLf} / ${pavementLfDivisor}) = ${suggestion.pavementTrips}`
+      );
+    }
+  }
+  if (suggestion.sidewalkTrips > 0) {
+    noteParts.push(
+      `sidewalk ceil(${sidewalkLf} / ${sidewalkDivisor}) = ${suggestion.sidewalkTrips}`
+    );
+  }
+  const notesDefault =
+    noteParts.length > 1
+      ? `From takeoff: ${noteParts.join(" + ")} = ${trips} trips`
+      : `From takeoff: ${noteParts.join("; ")} trips`;
 
   return {
     ...drivers,
@@ -92,7 +314,7 @@ export function applyEarthworkTakeoffToDrivers(
     notes:
       typeof drivers.notes === "string" && drivers.notes.trim()
         ? drivers.notes
-        : `From takeoff: ceil(${sf} / ${divisor}) = ${trips} trips (typical 2700–3000 SF/trip)`,
+        : notesDefault,
   };
 }
 
@@ -100,14 +322,13 @@ export function isEarthworkTestingParent(name: string): boolean {
   return name.toLowerCase().includes("earthwork testing");
 }
 
-/** Rule-based field line suggestions from drivers. Always editable afterwards. */
 export function suggestFieldLines(
   parentName: string,
   drivers: Drivers,
   takeoff?: ProjectTakeoff | null
 ): SuggestedLine[] {
   let d = drivers;
-  if (isEarthworkTestingParent(parentName) && n(takeoff?.buildingAreaSf, 0) > 0) {
+  if (isEarthworkTestingParent(parentName) && hasEarthworkTakeoff(takeoff)) {
     d = applyEarthworkTakeoffToDrivers(drivers, takeoff);
   }
 
@@ -218,7 +439,6 @@ export function suggestFieldLines(
   return lines;
 }
 
-/** Lab suggestions derived from project parents + drivers. */
 export function suggestLabLines(
   parents: { name: string; drivers: Drivers }[]
 ): SuggestedLine[] {
@@ -309,7 +529,6 @@ export function suggestLabLines(
   return lines;
 }
 
-/** Miss-check prompts when related parents are missing. */
 export function missCheckPrompts(
   selectedNames: string[],
   catalog: { name: string; relatedHints: string[] }[]
@@ -354,11 +573,31 @@ export function takeoffFromProject(project: {
   moistureConditionedSubgrade?: boolean;
   flexibleBaseCap?: boolean;
   earthworkSfPerTrip?: number | null;
+  pavementAreaSf?: number | null;
+  limeTreatedPavementSubgrade?: boolean;
+  pavementSfPerTrip?: number | null;
+  pavementSubgradeLf?: number | null;
+  pavementLfPerTrip?: number | null;
+  sidewalkLf?: number | null;
+  sidewalksBunchedTogether?: boolean;
+  sidewalkSpreadLfPerTrip?: number | null;
+  sidewalkBunchedLfPerTrip?: number | null;
 }): ProjectTakeoff {
   return {
     buildingAreaSf: project.buildingAreaSf ?? null,
     moistureConditionedSubgrade: project.moistureConditionedSubgrade ?? false,
     flexibleBaseCap: project.flexibleBaseCap ?? false,
     earthworkSfPerTrip: project.earthworkSfPerTrip ?? DEFAULT_EARTHWORK_SF_PER_TRIP,
+    pavementAreaSf: project.pavementAreaSf ?? null,
+    limeTreatedPavementSubgrade: project.limeTreatedPavementSubgrade ?? false,
+    pavementSfPerTrip: project.pavementSfPerTrip ?? DEFAULT_PAVEMENT_SF_PER_TRIP,
+    pavementSubgradeLf: project.pavementSubgradeLf ?? null,
+    pavementLfPerTrip: project.pavementLfPerTrip ?? DEFAULT_PAVEMENT_LF_PER_TRIP,
+    sidewalkLf: project.sidewalkLf ?? null,
+    sidewalksBunchedTogether: project.sidewalksBunchedTogether ?? false,
+    sidewalkSpreadLfPerTrip:
+      project.sidewalkSpreadLfPerTrip ?? DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
+    sidewalkBunchedLfPerTrip:
+      project.sidewalkBunchedLfPerTrip ?? DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   };
 }

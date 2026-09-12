@@ -6,6 +6,11 @@ import { prisma } from "./prisma";
 import {
   applyEarthworkTakeoffToDrivers,
   DEFAULT_EARTHWORK_SF_PER_TRIP,
+  DEFAULT_PAVEMENT_LF_PER_TRIP,
+  DEFAULT_PAVEMENT_SF_PER_TRIP,
+  DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
+  DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
+  hasEarthworkTakeoff,
   isEarthworkTestingParent,
   missCheckPrompts,
   parseDrivers,
@@ -30,6 +35,13 @@ function parseCheckbox(formData: FormData, key: string): boolean {
 function takeoffDataFromForm(formData: FormData) {
   const buildingAreaSf = parseOptionalFloat(formData, "buildingAreaSf");
   const earthworkSfPerTripRaw = parseOptionalFloat(formData, "earthworkSfPerTrip");
+  const pavementAreaSf = parseOptionalFloat(formData, "pavementAreaSf");
+  const pavementSfPerTripRaw = parseOptionalFloat(formData, "pavementSfPerTrip");
+  const pavementSubgradeLf = parseOptionalFloat(formData, "pavementSubgradeLf");
+  const pavementLfPerTripRaw = parseOptionalFloat(formData, "pavementLfPerTrip");
+  const sidewalkLf = parseOptionalFloat(formData, "sidewalkLf");
+  const sidewalkSpreadRaw = parseOptionalFloat(formData, "sidewalkSpreadLfPerTrip");
+  const sidewalkBunchedRaw = parseOptionalFloat(formData, "sidewalkBunchedLfPerTrip");
   return {
     buildingAreaSf,
     moistureConditionedSubgrade: parseCheckbox(formData, "moistureConditionedSubgrade"),
@@ -42,6 +54,31 @@ function takeoffDataFromForm(formData: FormData) {
     flexibleBaseThicknessNote: String(
       formData.get("flexibleBaseThicknessNote") || ""
     ).trim(),
+    pavementAreaSf,
+    limeTreatedPavementSubgrade: parseCheckbox(
+      formData,
+      "limeTreatedPavementSubgrade"
+    ),
+    pavementSfPerTrip:
+      pavementSfPerTripRaw !== null && pavementSfPerTripRaw > 0
+        ? pavementSfPerTripRaw
+        : DEFAULT_PAVEMENT_SF_PER_TRIP,
+    pavementSubgradeLf,
+    pavementLfPerTrip:
+      pavementLfPerTripRaw !== null && pavementLfPerTripRaw > 0
+        ? pavementLfPerTripRaw
+        : DEFAULT_PAVEMENT_LF_PER_TRIP,
+    pavementNotes: String(formData.get("pavementNotes") || "").trim(),
+    sidewalkLf,
+    sidewalksBunchedTogether: parseCheckbox(formData, "sidewalksBunchedTogether"),
+    sidewalkSpreadLfPerTrip:
+      sidewalkSpreadRaw !== null && sidewalkSpreadRaw > 0
+        ? sidewalkSpreadRaw
+        : DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
+    sidewalkBunchedLfPerTrip:
+      sidewalkBunchedRaw !== null && sidewalkBunchedRaw > 0
+        ? sidewalkBunchedRaw
+        : DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
   };
 }
 
@@ -184,7 +221,7 @@ export async function applyFieldSuggestions(projectId: string, parentId: string)
 
   if (
     isEarthworkTestingParent(parent.catalog.name) &&
-    (takeoff.buildingAreaSf ?? 0) > 0
+    hasEarthworkTakeoff(takeoff)
   ) {
     drivers = applyEarthworkTakeoffToDrivers(drivers, takeoff);
     await prisma.projectParent.update({
@@ -228,7 +265,7 @@ export async function applyAllFieldSuggestions(projectId: string) {
     let drivers = parseDrivers(parent.drivers);
     if (
       isEarthworkTestingParent(parent.catalog.name) &&
-      (takeoff.buildingAreaSf ?? 0) > 0
+      hasEarthworkTakeoff(takeoff)
     ) {
       drivers = applyEarthworkTakeoffToDrivers(drivers, takeoff);
       await prisma.projectParent.update({

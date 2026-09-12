@@ -1,4 +1,11 @@
-import { DEFAULT_EARTHWORK_SF_PER_TRIP } from "@/lib/heuristics";
+import {
+  DEFAULT_EARTHWORK_SF_PER_TRIP,
+  DEFAULT_PAVEMENT_LF_PER_TRIP,
+  DEFAULT_PAVEMENT_SF_PER_TRIP,
+  DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
+  DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
+  suggestEarthworkTrips,
+} from "@/lib/heuristics";
 
 export type TakeoffFactsValues = {
   buildingAreaSf?: number | null;
@@ -7,6 +14,16 @@ export type TakeoffFactsValues = {
   earthworkSfPerTrip?: number | null;
   moistureDepthNote?: string;
   flexibleBaseThicknessNote?: string;
+  pavementAreaSf?: number | null;
+  limeTreatedPavementSubgrade?: boolean;
+  pavementSfPerTrip?: number | null;
+  pavementSubgradeLf?: number | null;
+  pavementLfPerTrip?: number | null;
+  pavementNotes?: string;
+  sidewalkLf?: number | null;
+  sidewalksBunchedTogether?: boolean;
+  sidewalkSpreadLfPerTrip?: number | null;
+  sidewalkBunchedLfPerTrip?: number | null;
 };
 
 /** Shared Takeoff / Project facts fields (used inside a parent <form>). */
@@ -17,10 +34,51 @@ export function TakeoffFactsFields({
   values?: TakeoffFactsValues;
   compact?: boolean;
 }) {
-  const divisor =
+  const buildingDivisor =
     values?.earthworkSfPerTrip && values.earthworkSfPerTrip > 0
       ? values.earthworkSfPerTrip
       : DEFAULT_EARTHWORK_SF_PER_TRIP;
+  const pavementSfDivisor =
+    values?.pavementSfPerTrip && values.pavementSfPerTrip > 0
+      ? values.pavementSfPerTrip
+      : DEFAULT_PAVEMENT_SF_PER_TRIP;
+  const pavementLfDivisor =
+    values?.pavementLfPerTrip && values.pavementLfPerTrip > 0
+      ? values.pavementLfPerTrip
+      : DEFAULT_PAVEMENT_LF_PER_TRIP;
+  const sidewalkSpreadDivisor =
+    values?.sidewalkSpreadLfPerTrip && values.sidewalkSpreadLfPerTrip > 0
+      ? values.sidewalkSpreadLfPerTrip
+      : DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP;
+  const sidewalkBunchedDivisor =
+    values?.sidewalkBunchedLfPerTrip && values.sidewalkBunchedLfPerTrip > 0
+      ? values.sidewalkBunchedLfPerTrip
+      : DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP;
+  const limeTreated = !!values?.limeTreatedPavementSubgrade;
+  const sidewalksBunched = !!values?.sidewalksBunchedTogether;
+
+  const suggestion = suggestEarthworkTrips({
+    buildingAreaSf: values?.buildingAreaSf,
+    earthworkSfPerTrip: buildingDivisor,
+    pavementAreaSf: values?.pavementAreaSf,
+    limeTreatedPavementSubgrade: limeTreated,
+    pavementSfPerTrip: pavementSfDivisor,
+    pavementSubgradeLf: values?.pavementSubgradeLf,
+    pavementLfPerTrip: pavementLfDivisor,
+    sidewalkLf: values?.sidewalkLf,
+    sidewalksBunchedTogether: sidewalksBunched,
+    sidewalkSpreadLfPerTrip: sidewalkSpreadDivisor,
+    sidewalkBunchedLfPerTrip: sidewalkBunchedDivisor,
+  });
+
+  const buildingSf = values?.buildingAreaSf ?? 0;
+  const pavementSf = values?.pavementAreaSf ?? 0;
+  const pavementLf = values?.pavementSubgradeLf ?? 0;
+  const sidewalkLf = values?.sidewalkLf ?? 0;
+  const showBuilding = (buildingSf ?? 0) > 0;
+  const showPavement =
+    limeTreated ? (pavementSf ?? 0) > 0 : (pavementLf ?? 0) > 0;
+  const showSidewalk = (sidewalkLf ?? 0) > 0;
 
   return (
     <div className={compact ? "space-y-3" : "space-y-4"}>
@@ -29,10 +87,15 @@ export function TakeoffFactsFields({
           Takeoff / Project facts
         </h3>
         <p className="mt-0.5 text-xs text-slate-500">
-          Used for earthwork trip suggestions when estimating moisture-conditioned
-          subgrade with a flexible base cap. Typical range{" "}
-          <strong>2,700–3,000 SF/trip</strong>; default mid{" "}
-          <strong>{DEFAULT_EARTHWORK_SF_PER_TRIP.toLocaleString()}</strong>.
+          Earthwork trips = building + pavement (lime SF <em>or</em> non-lime LF) +
+          sidewalks. Building default{" "}
+          <strong>{DEFAULT_EARTHWORK_SF_PER_TRIP.toLocaleString()}</strong>{" "}
+          SF/trip; lime pavement{" "}
+          <strong>{DEFAULT_PAVEMENT_SF_PER_TRIP.toLocaleString()}</strong>{" "}
+          SF/trip; non-lime pavement{" "}
+          <strong>{DEFAULT_PAVEMENT_LF_PER_TRIP}</strong> LF/trip; sidewalks{" "}
+          <strong>{DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP}</strong> LF (spread) /{" "}
+          <strong>{DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP}</strong> LF (bunched).
           Suggestions never lock — edit freely after Apply.
         </p>
       </div>
@@ -56,18 +119,18 @@ export function TakeoffFactsFields({
         </label>
         <label className="block">
           <span className="text-sm font-medium text-slate-700">
-            Earthwork SF per trip
+            Building SF per trip
           </span>
           <input
             name="earthworkSfPerTrip"
             type="number"
             step="any"
             min="1"
-            defaultValue={String(divisor)}
+            defaultValue={String(buildingDivisor)}
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
           />
           <span className="mt-0.5 block text-xs text-slate-500">
-            typical 2700–3000 (editable — use 2700 or 3000 if preferred)
+            typical 2700–3000 (editable)
           </span>
         </label>
       </div>
@@ -121,6 +184,231 @@ export function TakeoffFactsFields({
           />
         </label>
       </div>
+
+      <div className="border-t border-slate-200 pt-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          Pavement subgrade
+        </p>
+        <label className="mb-3 inline-flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            name="limeTreatedPavementSubgrade"
+            value="true"
+            defaultChecked={limeTreated}
+            className="rounded border-slate-300"
+          />
+          Lime-treated pavement subgrade (uses SF rule; otherwise LF rule)
+        </label>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Pavement area (SF) — lime-treated
+            </span>
+            <input
+              name="pavementAreaSf"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.pavementAreaSf != null
+                  ? String(values.pavementAreaSf)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 150000"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Pavement SF per trip
+            </span>
+            <input
+              name="pavementSfPerTrip"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(pavementSfDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              typical 25,000–30,000 (default mid 27,500)
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Pavement subgrade (LF) — not lime-treated
+            </span>
+            <input
+              name="pavementSubgradeLf"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.pavementSubgradeLf != null
+                  ? String(values.pavementSubgradeLf)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 2400"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Pavement LF per trip
+            </span>
+            <input
+              name="pavementLfPerTrip"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(pavementLfDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              typical 200–400 (default mid 300)
+            </span>
+          </label>
+        </div>
+
+        <label className="mt-3 block">
+          <span className="text-sm font-medium text-slate-700">
+            Pavement notes (optional)
+          </span>
+          <input
+            name="pavementNotes"
+            type="text"
+            defaultValue={values?.pavementNotes ?? ""}
+            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            placeholder="e.g. 8 in lime-treated subgrade"
+          />
+        </label>
+      </div>
+
+      <div className="border-t border-slate-200 pt-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          Sitework sidewalks
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Sidewalk length (LF)
+            </span>
+            <input
+              name="sidewalkLf"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.sidewalkLf != null ? String(values.sidewalkLf) : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 500"
+            />
+          </label>
+          <div className="flex items-end">
+            <label className="inline-flex items-center gap-2 pb-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                name="sidewalksBunchedTogether"
+                value="true"
+                defaultChecked={sidewalksBunched}
+                className="rounded border-slate-300"
+              />
+              Sidewalks bunched together
+            </label>
+          </div>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Spread-out LF per trip
+            </span>
+            <input
+              name="sidewalkSpreadLfPerTrip"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(sidewalkSpreadDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 125 (when not bunched)
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Bunched LF per trip
+            </span>
+            <input
+              name="sidewalkBunchedLfPerTrip"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(sidewalkBunchedDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 150 (when bunched)
+            </span>
+          </label>
+        </div>
+      </div>
+
+      {(showBuilding || showPavement || showSidewalk) && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          {showBuilding && (
+            <p>
+              Building: ceil({Number(buildingSf).toLocaleString()} /{" "}
+              {buildingDivisor.toLocaleString()}) ={" "}
+              <strong>{suggestion.buildingTrips} trips</strong>
+            </p>
+          )}
+          {showPavement && limeTreated && (
+            <p className={showBuilding ? "mt-1" : undefined}>
+              Pavement (lime SF): ceil({Number(pavementSf).toLocaleString()} /{" "}
+              {pavementSfDivisor.toLocaleString()}) ={" "}
+              <strong>{suggestion.pavementTrips} trips</strong>
+            </p>
+          )}
+          {showPavement && !limeTreated && (
+            <p className={showBuilding ? "mt-1" : undefined}>
+              Pavement (LF): ceil({Number(pavementLf).toLocaleString()} /{" "}
+              {pavementLfDivisor.toLocaleString()}) ={" "}
+              <strong>{suggestion.pavementTrips} trips</strong>
+            </p>
+          )}
+          {showSidewalk && (
+            <p
+              className={
+                showBuilding || showPavement ? "mt-1" : undefined
+              }
+            >
+              Sidewalks ({sidewalksBunched ? "bunched" : "spread"}): ceil(
+              {Number(sidewalkLf).toLocaleString()} /{" "}
+              {(sidewalksBunched
+                ? sidewalkBunchedDivisor
+                : sidewalkSpreadDivisor
+              ).toLocaleString()}
+              ) = <strong>{suggestion.sidewalkTrips} trips</strong>
+            </p>
+          )}
+          {(
+            [showBuilding, showPavement, showSidewalk].filter(Boolean).length >
+            1
+          ) && (
+            <p className="mt-1 font-medium">
+              Combined:{" "}
+              {[
+                showBuilding ? suggestion.buildingTrips : null,
+                showPavement ? suggestion.pavementTrips : null,
+                showSidewalk ? suggestion.sidewalkTrips : null,
+              ]
+                .filter((x) => x != null)
+                .join(" + ")}{" "}
+              = {suggestion.total} trips
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

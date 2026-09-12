@@ -14,7 +14,12 @@ import { LineItemsEditor } from "@/components/LineItemsEditor";
 import { TakeoffFactsFields } from "@/components/TakeoffFacts";
 import {
   DEFAULT_EARTHWORK_SF_PER_TRIP,
-  earthworkTripRuleLabel,
+  DEFAULT_PAVEMENT_LF_PER_TRIP,
+  DEFAULT_PAVEMENT_SF_PER_TRIP,
+  DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP,
+  DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP,
+  earthworkTripRuleLabels,
+  hasEarthworkTakeoff,
   isEarthworkTestingParent,
   parseDrivers,
   suggestEarthworkTrips,
@@ -54,18 +59,19 @@ export default async function FieldPage({
   const fieldParents = project.parents.filter((p) => p.catalog.category !== "lab");
   const prompts = await getMissChecks(id);
   const takeoff = takeoffFromProject(project);
-  const divisor =
-    (takeoff.earthworkSfPerTrip && takeoff.earthworkSfPerTrip > 0
-      ? takeoff.earthworkSfPerTrip
-      : DEFAULT_EARTHWORK_SF_PER_TRIP) || DEFAULT_EARTHWORK_SF_PER_TRIP;
+  const suggestion = suggestEarthworkTrips(takeoff);
+  const labels = earthworkTripRuleLabels(takeoff);
   const buildingSf = takeoff.buildingAreaSf ?? 0;
-  const suggestedEarthworkTrips =
-    buildingSf > 0 ? suggestEarthworkTrips(buildingSf, divisor) : 0;
-  const ruleAppliesCondition =
+  const pavementSf = takeoff.pavementAreaSf ?? 0;
+  const pavementLf = takeoff.pavementSubgradeLf ?? 0;
+  const sidewalkLf = takeoff.sidewalkLf ?? 0;
+  const limeTreated = !!takeoff.limeTreatedPavementSubgrade;
+  const ruleAppliesBuilding =
     !!takeoff.moistureConditionedSubgrade && !!takeoff.flexibleBaseCap;
   const hasEarthworkTesting = fieldParents.some((p) =>
     isEarthworkTestingParent(p.catalog.name)
   );
+  const takeoffApplies = hasEarthworkTakeoff(takeoff);
 
   return (
     <div>
@@ -110,6 +116,16 @@ export default async function FieldPage({
               earthworkSfPerTrip: project.earthworkSfPerTrip,
               moistureDepthNote: project.moistureDepthNote,
               flexibleBaseThicknessNote: project.flexibleBaseThicknessNote,
+              pavementAreaSf: project.pavementAreaSf,
+              limeTreatedPavementSubgrade: project.limeTreatedPavementSubgrade,
+              pavementSfPerTrip: project.pavementSfPerTrip,
+              pavementSubgradeLf: project.pavementSubgradeLf,
+              pavementLfPerTrip: project.pavementLfPerTrip,
+              pavementNotes: project.pavementNotes,
+              sidewalkLf: project.sidewalkLf,
+              sidewalksBunchedTogether: project.sidewalksBunchedTogether,
+              sidewalkSpreadLfPerTrip: project.sidewalkSpreadLfPerTrip,
+              sidewalkBunchedLfPerTrip: project.sidewalkBunchedLfPerTrip,
             }}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -119,13 +135,10 @@ export default async function FieldPage({
             >
               Save takeoff facts
             </button>
-            {buildingSf > 0 && (
+            {takeoffApplies && (
               <p className="text-xs text-slate-600">
-                Preview: ceil({buildingSf.toLocaleString()} / {divisor}) ={" "}
-                <strong>{suggestedEarthworkTrips} trips</strong>
-                {" "}(range at 2700–3000:{" "}
-                {suggestEarthworkTrips(buildingSf, 3000)}–
-                {suggestEarthworkTrips(buildingSf, 2700)})
+                Preview total: <strong>{suggestion.total} trips</strong>
+                {labels.combined ? ` — ${labels.combined}` : ""}
               </p>
             )}
           </div>
@@ -146,8 +159,8 @@ export default async function FieldPage({
             const fieldLines = parent.lineItems.filter((l) => !l.isLab);
             const isEarthwork = isEarthworkTestingParent(parent.catalog.name);
             const displayDrivers =
-              isEarthwork && buildingSf > 0 && n(drivers.trips) === 0
-                ? { ...drivers, trips: suggestedEarthworkTrips }
+              isEarthwork && takeoffApplies && n(drivers.trips) === 0
+                ? { ...drivers, trips: suggestion.total }
                 : drivers;
 
             return (
@@ -170,19 +183,50 @@ export default async function FieldPage({
                 </div>
 
                 {isEarthwork && (
-                  <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                    <p className="font-medium">
-                      {earthworkTripRuleLabel(buildingSf, divisor)}
-                    </p>
-                    <p className="mt-1 text-xs text-amber-900/80">
-                      Applies when estimating moisture-conditioned subgrade with a
-                      flexible base cap
-                      {ruleAppliesCondition
-                        ? " (flags on for this project)."
-                        : " (turn on both flags in Takeoff if that describes this job)."}{" "}
-                      When building area &gt; 0, Apply suggestions uses this rule for
-                      Trips and cascades hours / gauge / vehicle. Numbers stay editable.
-                    </p>
+                  <div className="mb-4 space-y-2">
+                    {(buildingSf > 0 || !takeoffApplies) && (
+                      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                        <p className="font-medium">{labels.building}</p>
+                        <p className="mt-1 text-xs text-amber-900/80">
+                          Moisture-conditioned subgrade + flexible base cap
+                          {ruleAppliesBuilding
+                            ? " (flags on for this project)."
+                            : " (turn on both flags in Takeoff if that describes this job)."}
+                        </p>
+                      </div>
+                    )}
+                    {(limeTreated
+                      ? pavementSf > 0 || !takeoffApplies
+                      : pavementLf > 0 || !takeoffApplies) && (
+                      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                        <p className="font-medium">{labels.pavement}</p>
+                        <p className="mt-1 text-xs text-amber-900/80">
+                          {limeTreated
+                            ? "Lime-treated pavement uses the SF rule only (LF rule not applied)."
+                            : "No lime treatment: pavement subgrade uses the LF rule only (SF rule not applied)."}
+                        </p>
+                      </div>
+                    )}
+                    {(sidewalkLf > 0 || !takeoffApplies) && (
+                      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                        <p className="font-medium">{labels.sidewalk}</p>
+                        <p className="mt-1 text-xs text-amber-900/80">
+                          Spread-out default{" "}
+                          {DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP} LF/trip; bunched{" "}
+                          {DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP} LF/trip
+                          (editable).
+                        </p>
+                      </div>
+                    )}
+                    {labels.combined && (
+                      <div className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-950">
+                        {labels.combined}
+                        <span className="mt-1 block text-xs font-normal text-amber-900/80">
+                          Apply suggestions uses the total for Trips and cascades
+                          hours / gauge / vehicle. Numbers stay editable.
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -228,10 +272,15 @@ export default async function FieldPage({
         </div>
       )}
 
-      {hasEarthworkTesting && buildingSf <= 0 && (
+      {hasEarthworkTesting && !takeoffApplies && (
         <p className="mt-4 text-xs text-slate-500">
-          Tip: enter building area in Takeoff / Project facts above to suggest
-          Earthwork Testing trips (1 trip / {divisor} SF, typical 2700–3000).
+          Tip: enter building SF, pavement (lime SF or non-lime LF), and/or
+          sidewalk LF in Takeoff above. Defaults: building{" "}
+          {DEFAULT_EARTHWORK_SF_PER_TRIP.toLocaleString()} SF/trip; lime pavement{" "}
+          {DEFAULT_PAVEMENT_SF_PER_TRIP.toLocaleString()} SF/trip; non-lime{" "}
+          {DEFAULT_PAVEMENT_LF_PER_TRIP} LF/trip; sidewalks{" "}
+          {DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP}/{DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP}{" "}
+          LF. Trips are summed.
         </p>
       )}
     </div>

@@ -81,6 +81,16 @@ export default async function ProjectSetupPage({
               earthworkSfPerTrip: project.earthworkSfPerTrip,
               moistureDepthNote: project.moistureDepthNote,
               flexibleBaseThicknessNote: project.flexibleBaseThicknessNote,
+              pavementAreaSf: project.pavementAreaSf,
+              limeTreatedPavementSubgrade: project.limeTreatedPavementSubgrade,
+              pavementSfPerTrip: project.pavementSfPerTrip,
+              pavementSubgradeLf: project.pavementSubgradeLf,
+              pavementLfPerTrip: project.pavementLfPerTrip,
+              pavementNotes: project.pavementNotes,
+              sidewalkLf: project.sidewalkLf,
+              sidewalksBunchedTogether: project.sidewalksBunchedTogether,
+              sidewalkSpreadLfPerTrip: project.sidewalkSpreadLfPerTrip,
+              sidewalkBunchedLfPerTrip: project.sidewalkBunchedLfPerTrip,
             }}
           />
         </div>

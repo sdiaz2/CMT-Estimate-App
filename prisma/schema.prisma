@@ -49,6 +49,26 @@ model Project {
   moistureDepthNote           String   @default("")
   /// Optional note e.g. flexible base thickness
   flexibleBaseThicknessNote   String   @default("")
+  /// Pavement area takeoff (SF) for lime-treated pavement subgrade trip rule
+  pavementAreaSf              Float?
+  /// Lime-treated pavement subgrade condition (true → SF rule; false → LF rule)
+  limeTreatedPavementSubgrade Boolean  @default(false)
+  /// SF of pavement per earthwork trip when lime-treated (typical 25000–30000; default mid 27500)
+  pavementSfPerTrip           Float    @default(27500)
+  /// Pavement subgrade length (LF) when NOT lime-treated
+  pavementSubgradeLf          Float?
+  /// LF of pavement subgrade per earthwork trip when not lime-treated (typical 200–400; default mid 300)
+  pavementLfPerTrip           Float    @default(300)
+  /// Optional notes for pavement / lime treatment
+  pavementNotes               String   @default("")
+  /// Sidewalk length takeoff (LF) for sitework sidewalk earthwork trips
+  sidewalkLf                  Float?
+  /// When true, sidewalks are bunched (use bunched LF/trip); when false, spread out
+  sidewalksBunchedTogether    Boolean  @default(false)
+  /// LF per trip when sidewalks are spread out (default 125)
+  sidewalkSpreadLfPerTrip     Float    @default(125)
+  /// LF per trip when sidewalks are bunched together (default 150)
+  sidewalkBunchedLfPerTrip    Float    @default(150)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
   parents                     ProjectParent[]

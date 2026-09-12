@@ -139,9 +139,9 @@ Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appe
 
 ### Concrete Testing & Reinforcing Steel Observations — trip suggestions
 
-Parent: **Concrete Testing & Reinforcing Steel Observations**. Apply suggestions sets **Trips** and cascades Concrete Testing hours (~4 hr/trip), OT (~15%), and Vehicle — same pattern as other field parents. Rules A (grade beams/pier caps) and B (building slab) are implemented; structure ready for more pour types (walls, etc.) without a rewrite.
+Parent: **Concrete Testing & Reinforcing Steel Observations**. Apply suggestions sets **Trips** and cascades Concrete Testing hours (~4 hr/trip), OT (~15%), and Vehicle — same pattern as other field parents. Rules A (grade beams/pier caps), B (building slab), and C (private/public pavement) are implemented; structure ready for more pour types (walls, etc.) without a rewrite.
 
-**`total = gradeBeamsPierCapsTrips + buildingSlabTrips`** (+ future pour-type trips when added)
+**`total = gradeBeamsPierCapsTrips + buildingSlabTrips + privatePavementTrips + publicPavementTrips`**
 
 #### Rule A — Grade beams and pier caps
 
@@ -177,6 +177,29 @@ Parent: **Concrete Testing & Reinforcing Steel Observations**. Apply suggestions
 - 200 yd³ @ 300 → ceil(0.67) = 1 → min 2 → **2 trips**
 - 900 yd³ @ 300 → ceil(3) = **3 trips**
 - Rule A 50 yd³ (2) + Rule B 200 yd³ (2) → **4 trips** total
+
+#### Rule C — Pavement concrete
+
+Separate takeoff fields for private vs public pavement. **No minimum-2** — only `ceil(yd³ / divisor)`.
+
+| Input | Notes |
+|-------|--------|
+| Private pavement (yd³) | `concreteYd3PrivatePavement` |
+| yd³ per trip (private) | Editable; **default 500** (`yd3PerTripPrivatePavement`) — one trip for every 500 yd³ or less |
+| Public pavement (yd³) | `concreteYd3PublicPavement` |
+| yd³ per trip (public) | Editable; **default 900** (`yd3PerTripPublicPavement`) — one trip for every 900 yd³ or less |
+
+**Formulas (when yd³ > 0):**
+
+- `privatePavementTrips = ceil(concreteYd3PrivatePavement / yd3PerTripPrivatePavement)`
+- `publicPavementTrips = ceil(concreteYd3PublicPavement / yd3PerTripPublicPavement)`
+
+**Examples:**
+
+- 400 yd³ private @ 500 → **1 trip**
+- 1,200 yd³ private @ 500 → **3 trips**
+- 800 yd³ public @ 900 → **1 trip**
+- 2,000 yd³ public @ 900 → **3 trips**
 
 Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Concrete Testing parent.
 

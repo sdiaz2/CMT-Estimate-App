@@ -104,6 +104,10 @@ export default async function ProjectSetupPage({
               yd3PerTripGradeBeams: project.yd3PerTripGradeBeams,
               concreteYd3BuildingSlab: project.concreteYd3BuildingSlab,
               yd3PerTripBuildingSlab: project.yd3PerTripBuildingSlab,
+              concreteYd3PrivatePavement: project.concreteYd3PrivatePavement,
+              yd3PerTripPrivatePavement: project.yd3PerTripPrivatePavement,
+              concreteYd3PublicPavement: project.concreteYd3PublicPavement,
+              yd3PerTripPublicPavement: project.yd3PerTripPublicPavement,
             }}
           />
         </div>

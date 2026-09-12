@@ -36,6 +36,10 @@ export type ProjectTakeoff = {
   yd3PerTripGradeBeams?: number | null;
   concreteYd3BuildingSlab?: number | null;
   yd3PerTripBuildingSlab?: number | null;
+  concreteYd3PrivatePavement?: number | null;
+  yd3PerTripPrivatePavement?: number | null;
+  concreteYd3PublicPavement?: number | null;
+  yd3PerTripPublicPavement?: number | null;
   // Future pour types (walls, etc.) get their own yd³ + divisor fields here.
 };
 
@@ -563,6 +567,9 @@ export const MIN_TRIPS_GRADE_BEAMS_PIER_CAPS = 2;
 export const DEFAULT_YD3_PER_TRIP_BUILDING_SLAB = 300;
 export const MIN_TRIPS_BUILDING_SLAB = 2;
 
+export const DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT = 500;
+export const DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT = 900;
+
 /** Shared pour trip helper: when yd³ > 0, max(minTrips, ceil(yd³ / divisor)). */
 function concretePourTrips(yd3: number, divisor: number, minTrips: number): number {
   if (yd3 <= 0 || divisor <= 0) return 0;
@@ -571,12 +578,14 @@ function concretePourTrips(yd3: number, divisor: number, minTrips: number): numb
 
 /**
  * Suggested concrete trips breakdown.
- * Rule A (grade beams / pier caps) + Rule B (building slab); structure ready for C (walls, …).
- * total = gradeBeamsPierCapsTrips + buildingSlabTrips (+ future pour-type trips)
+ * Rule A (grade beams / pier caps) + Rule B (building slab) + Rule C (private/public pavement).
+ * total = gradeBeamsPierCapsTrips + buildingSlabTrips + privatePavementTrips + publicPavementTrips
  */
 export type ConcreteTripSuggestion = {
   gradeBeamsPierCapsTrips: number;
   buildingSlabTrips: number;
+  privatePavementTrips: number;
+  publicPavementTrips: number;
   total: number;
 };
 
@@ -593,12 +602,18 @@ export type ConcreteTripSuggestion = {
  *   when yd3 > 0: final = max(2, raw)  (minimum 2 trips if ceil < 2)
  *   divisor default 300
  *
- * total = gradeBeamsPierCapsTrips + buildingSlabTrips
+ * Rule C — Pavement concrete (no extra minimum-2):
+ *   Private: ceil(concreteYd3PrivatePavement / yd3PerTripPrivatePavement) — default 500
+ *   Public:  ceil(concreteYd3PublicPavement / yd3PerTripPublicPavement) — default 900
+ *
+ * total = gradeBeamsPierCapsTrips + buildingSlabTrips + privatePavementTrips + publicPavementTrips
  *
  * Example A: 50 yd³ @ 137.5 → ceil(0.36)=1 → min 2 → 2 trips
  * Example A: 400 yd³ @ 137.5 → ceil(2.91)=3 trips
  * Example B: 200 yd³ @ 300 → ceil(0.67)=1 → min 2 → 2 trips
  * Example B: 900 yd³ @ 300 → ceil(3)=3 trips
+ * Example C private: 400 @ 500 → 1; 1200 @ 500 → 3
+ * Example C public: 800 @ 900 → 1; 2000 @ 900 → 3
  */
 export function suggestConcreteTrips(
   takeoff: ProjectTakeoff | null | undefined
@@ -625,10 +640,30 @@ export function suggestConcreteTrips(
     MIN_TRIPS_BUILDING_SLAB
   );
 
+  const privateYd3 = n(takeoff?.concreteYd3PrivatePavement, 0);
+  const privateDivisor =
+    n(takeoff?.yd3PerTripPrivatePavement, 0) > 0
+      ? n(takeoff?.yd3PerTripPrivatePavement)
+      : DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT;
+  const privatePavementTrips = ceilTrips(privateYd3, privateDivisor);
+
+  const publicYd3 = n(takeoff?.concreteYd3PublicPavement, 0);
+  const publicDivisor =
+    n(takeoff?.yd3PerTripPublicPavement, 0) > 0
+      ? n(takeoff?.yd3PerTripPublicPavement)
+      : DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT;
+  const publicPavementTrips = ceilTrips(publicYd3, publicDivisor);
+
   return {
     gradeBeamsPierCapsTrips,
     buildingSlabTrips,
-    total: gradeBeamsPierCapsTrips + buildingSlabTrips,
+    privatePavementTrips,
+    publicPavementTrips,
+    total:
+      gradeBeamsPierCapsTrips +
+      buildingSlabTrips +
+      privatePavementTrips +
+      publicPavementTrips,
   };
 }
 
@@ -643,6 +678,8 @@ export function concreteTripRuleLabels(
 ): {
   gradeBeamsPierCaps?: string;
   buildingSlab?: string;
+  privatePavement?: string;
+  publicPavement?: string;
   combined?: string;
 } {
   const gradeYd3 = n(takeoff?.concreteYd3GradeBeamsPierCaps, 0);
@@ -655,10 +692,22 @@ export function concreteTripRuleLabels(
     n(takeoff?.yd3PerTripBuildingSlab, 0) > 0
       ? n(takeoff?.yd3PerTripBuildingSlab)
       : DEFAULT_YD3_PER_TRIP_BUILDING_SLAB;
+  const privateYd3 = n(takeoff?.concreteYd3PrivatePavement, 0);
+  const privateDivisor =
+    n(takeoff?.yd3PerTripPrivatePavement, 0) > 0
+      ? n(takeoff?.yd3PerTripPrivatePavement)
+      : DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT;
+  const publicYd3 = n(takeoff?.concreteYd3PublicPavement, 0);
+  const publicDivisor =
+    n(takeoff?.yd3PerTripPublicPavement, 0) > 0
+      ? n(takeoff?.yd3PerTripPublicPavement)
+      : DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT;
   const suggestion = suggestConcreteTrips(takeoff);
   const out: {
     gradeBeamsPierCaps?: string;
     buildingSlab?: string;
+    privatePavement?: string;
+    publicPavement?: string;
     combined?: string;
   } = {};
 
@@ -676,11 +725,27 @@ export function concreteTripRuleLabels(
     out.buildingSlab = `Building slab: 1 trip / ${slabDivisor} yd³ (default 300), minimum ${MIN_TRIPS_BUILDING_SLAB} trips when volume > 0 but ceil < 2. Enter yd³ to suggest trips.`;
   }
 
+  if (privateYd3 > 0) {
+    out.privatePavement = `Private pavement: ceil(${privateYd3.toLocaleString()} / ${privateDivisor}) = ${suggestion.privatePavementTrips} trips (1 trip / ${privateDivisor} yd³ or less; no min-2)`;
+  } else {
+    out.privatePavement = `Private pavement: 1 trip / ${privateDivisor} yd³ or less (default 500); trips = ceil(yd³ / divisor) only — no minimum-2. Enter yd³ to suggest trips.`;
+  }
+
+  if (publicYd3 > 0) {
+    out.publicPavement = `Public pavement: ceil(${publicYd3.toLocaleString()} / ${publicDivisor}) = ${suggestion.publicPavementTrips} trips (1 trip / ${publicDivisor} yd³ or less; no min-2)`;
+  } else {
+    out.publicPavement = `Public pavement: 1 trip / ${publicDivisor} yd³ or less (default 900); trips = ceil(yd³ / divisor) only — no minimum-2. Enter yd³ to suggest trips.`;
+  }
+
   const parts: string[] = [];
   if (suggestion.gradeBeamsPierCapsTrips > 0)
     parts.push(`${suggestion.gradeBeamsPierCapsTrips} grade beams/pier caps`);
   if (suggestion.buildingSlabTrips > 0)
     parts.push(`${suggestion.buildingSlabTrips} building slab`);
+  if (suggestion.privatePavementTrips > 0)
+    parts.push(`${suggestion.privatePavementTrips} private pavement`);
+  if (suggestion.publicPavementTrips > 0)
+    parts.push(`${suggestion.publicPavementTrips} public pavement`);
   if (parts.length > 1) {
     out.combined = `Combined concrete: ${parts.join(" + ")} = ${suggestion.total} trips`;
   } else if (suggestion.total > 0) {
@@ -694,7 +759,13 @@ export function concreteTripRuleLabel(
   takeoff: ProjectTakeoff | null | undefined
 ): string {
   const labels = concreteTripRuleLabels(takeoff);
-  return [labels.gradeBeamsPierCaps, labels.buildingSlab, labels.combined]
+  return [
+    labels.gradeBeamsPierCaps,
+    labels.buildingSlab,
+    labels.privatePavement,
+    labels.publicPavement,
+    labels.combined,
+  ]
     .filter(Boolean)
     .join(" · ");
 }
@@ -720,6 +791,16 @@ export function applyConcreteTakeoffToDrivers(
     n(takeoff?.yd3PerTripBuildingSlab, 0) > 0
       ? n(takeoff?.yd3PerTripBuildingSlab)
       : DEFAULT_YD3_PER_TRIP_BUILDING_SLAB;
+  const privateYd3 = n(takeoff?.concreteYd3PrivatePavement, 0);
+  const privateDivisor =
+    n(takeoff?.yd3PerTripPrivatePavement, 0) > 0
+      ? n(takeoff?.yd3PerTripPrivatePavement)
+      : DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT;
+  const publicYd3 = n(takeoff?.concreteYd3PublicPavement, 0);
+  const publicDivisor =
+    n(takeoff?.yd3PerTripPublicPavement, 0) > 0
+      ? n(takeoff?.yd3PerTripPublicPavement)
+      : DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT;
 
   const noteParts: string[] = [];
   if (suggestion.gradeBeamsPierCapsTrips > 0) {
@@ -730,6 +811,16 @@ export function applyConcreteTakeoffToDrivers(
   if (suggestion.buildingSlabTrips > 0) {
     noteParts.push(
       `building slab max(2, ceil(${slabYd3} / ${slabDivisor})) = ${suggestion.buildingSlabTrips}`
+    );
+  }
+  if (suggestion.privatePavementTrips > 0) {
+    noteParts.push(
+      `private pavement ceil(${privateYd3} / ${privateDivisor}) = ${suggestion.privatePavementTrips}`
+    );
+  }
+  if (suggestion.publicPavementTrips > 0) {
+    noteParts.push(
+      `public pavement ceil(${publicYd3} / ${publicDivisor}) = ${suggestion.publicPavementTrips}`
     );
   }
   const notesDefault =
@@ -1038,6 +1129,10 @@ export function takeoffFromProject(project: {
   yd3PerTripGradeBeams?: number | null;
   concreteYd3BuildingSlab?: number | null;
   yd3PerTripBuildingSlab?: number | null;
+  concreteYd3PrivatePavement?: number | null;
+  yd3PerTripPrivatePavement?: number | null;
+  concreteYd3PublicPavement?: number | null;
+  yd3PerTripPublicPavement?: number | null;
 }): ProjectTakeoff {
   return {
     buildingAreaSf: project.buildingAreaSf ?? null,
@@ -1073,5 +1168,11 @@ export function takeoffFromProject(project: {
     concreteYd3BuildingSlab: project.concreteYd3BuildingSlab ?? null,
     yd3PerTripBuildingSlab:
       project.yd3PerTripBuildingSlab ?? DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
+    concreteYd3PrivatePavement: project.concreteYd3PrivatePavement ?? null,
+    yd3PerTripPrivatePavement:
+      project.yd3PerTripPrivatePavement ?? DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
+    concreteYd3PublicPavement: project.concreteYd3PublicPavement ?? null,
+    yd3PerTripPublicPavement:
+      project.yd3PerTripPublicPavement ?? DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT,
   };
 }

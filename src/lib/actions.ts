@@ -18,6 +18,8 @@ import {
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
   DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
+  DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
+  DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT,
   hasConcreteTakeoff,
   hasEarthworkTakeoff,
   hasFoundationTakeoff,
@@ -83,6 +85,22 @@ function takeoffDataFromForm(formData: FormData) {
   const yd3PerTripBuildingSlabRaw = parseOptionalFloat(
     formData,
     "yd3PerTripBuildingSlab"
+  );
+  const concreteYd3PrivatePavement = parseOptionalFloat(
+    formData,
+    "concreteYd3PrivatePavement"
+  );
+  const yd3PerTripPrivatePavementRaw = parseOptionalFloat(
+    formData,
+    "yd3PerTripPrivatePavement"
+  );
+  const concreteYd3PublicPavement = parseOptionalFloat(
+    formData,
+    "concreteYd3PublicPavement"
+  );
+  const yd3PerTripPublicPavementRaw = parseOptionalFloat(
+    formData,
+    "yd3PerTripPublicPavement"
   );
   return {
     buildingAreaSf,
@@ -157,6 +175,16 @@ function takeoffDataFromForm(formData: FormData) {
       yd3PerTripBuildingSlabRaw !== null && yd3PerTripBuildingSlabRaw > 0
         ? yd3PerTripBuildingSlabRaw
         : DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
+    concreteYd3PrivatePavement,
+    yd3PerTripPrivatePavement:
+      yd3PerTripPrivatePavementRaw !== null && yd3PerTripPrivatePavementRaw > 0
+        ? yd3PerTripPrivatePavementRaw
+        : DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
+    concreteYd3PublicPavement,
+    yd3PerTripPublicPavement:
+      yd3PerTripPublicPavementRaw !== null && yd3PerTripPublicPavementRaw > 0
+        ? yd3PerTripPublicPavementRaw
+        : DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT,
   };
 }
 

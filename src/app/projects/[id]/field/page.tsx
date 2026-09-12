@@ -24,6 +24,8 @@ import {
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
   DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
+  DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
+  DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT,
   MIN_TRIPS_BUILDING_SLAB,
   MIN_TRIPS_GRADE_BEAMS_PIER_CAPS,
   concreteTripRuleLabels,
@@ -168,6 +170,10 @@ export default async function FieldPage({
               yd3PerTripGradeBeams: project.yd3PerTripGradeBeams,
               concreteYd3BuildingSlab: project.concreteYd3BuildingSlab,
               yd3PerTripBuildingSlab: project.yd3PerTripBuildingSlab,
+              concreteYd3PrivatePavement: project.concreteYd3PrivatePavement,
+              yd3PerTripPrivatePavement: project.yd3PerTripPrivatePavement,
+              concreteYd3PublicPavement: project.concreteYd3PublicPavement,
+              yd3PerTripPublicPavement: project.yd3PerTripPublicPavement,
             }}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -203,6 +209,12 @@ export default async function FieldPage({
                   concreteSuggestion.buildingSlabTrips > 0
                     ? `building slab ${concreteSuggestion.buildingSlabTrips}`
                     : null,
+                  concreteSuggestion.privatePavementTrips > 0
+                    ? `private pavement ${concreteSuggestion.privatePavementTrips}`
+                    : null,
+                  concreteSuggestion.publicPavementTrips > 0
+                    ? `public pavement ${concreteSuggestion.publicPavementTrips}`
+                    : null,
                 ]
                   .filter(Boolean)
                   .join(" + ")
@@ -212,6 +224,12 @@ export default async function FieldPage({
                         : null,
                       concreteSuggestion.buildingSlabTrips > 0
                         ? `building slab ${concreteSuggestion.buildingSlabTrips}`
+                        : null,
+                      concreteSuggestion.privatePavementTrips > 0
+                        ? `private pavement ${concreteSuggestion.privatePavementTrips}`
+                        : null,
+                      concreteSuggestion.publicPavementTrips > 0
+                        ? `public pavement ${concreteSuggestion.publicPavementTrips}`
                         : null,
                     ]
                       .filter(Boolean)
@@ -365,9 +383,29 @@ export default async function FieldPage({
                         Rule B — Building slab: 1 trip /{" "}
                         {DEFAULT_YD3_PER_TRIP_BUILDING_SLAB} yd³ or more; if
                         yd³ &gt; 0 but ceil &lt; 2, minimum{" "}
-                        {MIN_TRIPS_BUILDING_SLAB} trips. Apply suggestions sets
-                        Trips and cascades Concrete Testing / OT / Vehicle.
-                        Numbers stay editable.
+                        {MIN_TRIPS_BUILDING_SLAB} trips.
+                      </p>
+                    </div>
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                      <p className="font-medium">
+                        {concreteLabels.privatePavement}
+                      </p>
+                      <p className="mt-1 text-xs text-amber-900/80">
+                        Rule C — Private pavement: 1 trip /{" "}
+                        {DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT} yd³ or less;
+                        trips = ceil(yd³ / divisor) only (no min-2).
+                      </p>
+                    </div>
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                      <p className="font-medium">
+                        {concreteLabels.publicPavement}
+                      </p>
+                      <p className="mt-1 text-xs text-amber-900/80">
+                        Rule C — Public pavement: 1 trip /{" "}
+                        {DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT} yd³ or less;
+                        trips = ceil(yd³ / divisor) only (no min-2). Apply
+                        suggestions sets Trips and cascades Concrete Testing /
+                        OT / Vehicle. Numbers stay editable.
                       </p>
                     </div>
                     {concreteLabels.combined && (
@@ -446,10 +484,12 @@ export default async function FieldPage({
         <p className="mt-4 text-xs text-slate-500">
           Tip: for Concrete Testing &amp; Reinforcing Steel Observations, enter
           grade beams / pier caps yd³ (default{" "}
-          {DEFAULT_YD3_PER_TRIP_GRADE_BEAMS}/trip) and/or building slab yd³
-          (default {DEFAULT_YD3_PER_TRIP_BUILDING_SLAB}/trip). Each pour type
-          uses min {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS} trips when volume &gt; 0;
-          total = A + B.
+          {DEFAULT_YD3_PER_TRIP_GRADE_BEAMS}/trip), building slab yd³ (default{" "}
+          {DEFAULT_YD3_PER_TRIP_BUILDING_SLAB}/trip), and/or private/public
+          pavement yd³ (defaults {DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT}/
+          {DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT}). A/B use min{" "}
+          {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS} when volume &gt; 0; C is ceil only.
+          Total = A + B + private + public.
         </p>
       )}
     </div>

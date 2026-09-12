@@ -93,6 +93,14 @@ model Project {
   concreteYd3BuildingSlab     Float?
   /// yd³ per trip for building slab (default 300)
   yd3PerTripBuildingSlab      Float    @default(300)
+  /// Private pavement concrete volume (yd³) for Concrete Testing trip rule C
+  concreteYd3PrivatePavement  Float?
+  /// yd³ per trip for private pavement (default 500)
+  yd3PerTripPrivatePavement   Float    @default(500)
+  /// Public pavement concrete volume (yd³) for Concrete Testing trip rule C
+  concreteYd3PublicPavement   Float?
+  /// yd³ per trip for public pavement (default 900)
+  yd3PerTripPublicPavement    Float    @default(900)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
   parents                     ProjectParent[]

@@ -10,6 +10,8 @@ import {
   DEFAULT_UTILITY_TRENCH_LF_PER_TRIP,
   DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
   DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
+  DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
+  DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT,
   MIN_TRIPS_BUILDING_SLAB,
   MIN_TRIPS_GRADE_BEAMS_PIER_CAPS,
   normalizePierType,
@@ -49,6 +51,10 @@ export type TakeoffFactsValues = {
   yd3PerTripGradeBeams?: number | null;
   concreteYd3BuildingSlab?: number | null;
   yd3PerTripBuildingSlab?: number | null;
+  concreteYd3PrivatePavement?: number | null;
+  yd3PerTripPrivatePavement?: number | null;
+  concreteYd3PublicPavement?: number | null;
+  yd3PerTripPublicPavement?: number | null;
 };
 
 /** Shared Takeoff / Project facts fields (used inside a parent <form>). */
@@ -104,6 +110,14 @@ export function TakeoffFactsFields({
     values?.yd3PerTripBuildingSlab && values.yd3PerTripBuildingSlab > 0
       ? values.yd3PerTripBuildingSlab
       : DEFAULT_YD3_PER_TRIP_BUILDING_SLAB;
+  const yd3PrivatePavementDivisor =
+    values?.yd3PerTripPrivatePavement && values.yd3PerTripPrivatePavement > 0
+      ? values.yd3PerTripPrivatePavement
+      : DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT;
+  const yd3PublicPavementDivisor =
+    values?.yd3PerTripPublicPavement && values.yd3PerTripPublicPavement > 0
+      ? values.yd3PerTripPublicPavement
+      : DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT;
   const limeTreated = !!values?.limeTreatedPavementSubgrade;
   const sidewalksBunched = !!values?.sidewalksBunchedTogether;
 
@@ -142,12 +156,20 @@ export function TakeoffFactsFields({
     yd3PerTripGradeBeams: yd3GradeBeamsDivisor,
     concreteYd3BuildingSlab: values?.concreteYd3BuildingSlab,
     yd3PerTripBuildingSlab: yd3BuildingSlabDivisor,
+    concreteYd3PrivatePavement: values?.concreteYd3PrivatePavement,
+    yd3PerTripPrivatePavement: yd3PrivatePavementDivisor,
+    concreteYd3PublicPavement: values?.concreteYd3PublicPavement,
+    yd3PerTripPublicPavement: yd3PublicPavementDivisor,
   });
   const gradeBeamsYd3 = values?.concreteYd3GradeBeamsPierCaps ?? 0;
   const buildingSlabYd3 = values?.concreteYd3BuildingSlab ?? 0;
+  const privatePavementYd3 = values?.concreteYd3PrivatePavement ?? 0;
+  const publicPavementYd3 = values?.concreteYd3PublicPavement ?? 0;
   const showConcrete = concreteSuggestion.total > 0;
   const showGradeBeams = (gradeBeamsYd3 ?? 0) > 0;
   const showBuildingSlab = (buildingSlabYd3 ?? 0) > 0;
+  const showPrivatePavement = (privatePavementYd3 ?? 0) > 0;
+  const showPublicPavement = (publicPavementYd3 ?? 0) > 0;
   const showBuilding = (buildingSf ?? 0) > 0;
   const showPavement =
     limeTreated ? (pavementSf ?? 0) > 0 : (pavementLf ?? 0) > 0;
@@ -172,10 +194,13 @@ export function TakeoffFactsFields({
           <strong>{DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP}</strong> LF (bunched);
           utility trench{" "}
           <strong>{DEFAULT_UTILITY_TRENCH_LF_PER_TRIP}</strong> LF/trip (typical
-          150–175). Concrete (Rule A): grade beams/pier caps default{" "}
-          <strong>{DEFAULT_YD3_PER_TRIP_GRADE_BEAMS}</strong> yd³/trip (typical
-          100–175), min {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS} trips. Suggestions
-          never lock — edit freely after Apply.
+          150–175). Concrete: Rule A grade beams default{" "}
+          <strong>{DEFAULT_YD3_PER_TRIP_GRADE_BEAMS}</strong> yd³/trip (min{" "}
+          {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS}); Rule B slab{" "}
+          <strong>{DEFAULT_YD3_PER_TRIP_BUILDING_SLAB}</strong>; Rule C private{" "}
+          <strong>{DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT}</strong> / public{" "}
+          <strong>{DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT}</strong> (ceil only, no
+          min-2). Suggestions never lock — edit freely after Apply.
         </p>
       </div>
 
@@ -627,8 +652,11 @@ export function TakeoffFactsFields({
           <strong>{DEFAULT_YD3_PER_TRIP_GRADE_BEAMS}</strong> (typical 100–175).
           Rule B — Building slab: max({MIN_TRIPS_BUILDING_SLAB}, ceil(yd³ /
           divisor)), default{" "}
-          <strong>{DEFAULT_YD3_PER_TRIP_BUILDING_SLAB}</strong> yd³/trip. Total =
-          A + B. Ready for more pour types later.
+          <strong>{DEFAULT_YD3_PER_TRIP_BUILDING_SLAB}</strong>. Rule C —
+          Pavement: private ceil(yd³ /{" "}
+          <strong>{DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT}</strong>), public
+          ceil(yd³ / <strong>{DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT}</strong>) —
+          no min-2. Total = A + B + private + public.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
@@ -701,6 +729,76 @@ export function TakeoffFactsFields({
               default 300 (1 trip / 300 yd³ or more; min 2 if less)
             </span>
           </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Private pavement (yd³)
+            </span>
+            <input
+              name="concreteYd3PrivatePavement"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.concreteYd3PrivatePavement != null &&
+                values.concreteYd3PrivatePavement > 0
+                  ? String(values.concreteYd3PrivatePavement)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 400"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              yd³ per trip (private pavement)
+            </span>
+            <input
+              name="yd3PerTripPrivatePavement"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(yd3PrivatePavementDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 500 (1 trip / 500 yd³ or less; ceil only)
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Public pavement (yd³)
+            </span>
+            <input
+              name="concreteYd3PublicPavement"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.concreteYd3PublicPavement != null &&
+                values.concreteYd3PublicPavement > 0
+                  ? String(values.concreteYd3PublicPavement)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 800"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              yd³ per trip (public pavement)
+            </span>
+            <input
+              name="yd3PerTripPublicPavement"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(yd3PublicPavementDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 900 (1 trip / 900 yd³ or less; ceil only)
+            </span>
+          </label>
         </div>
         {showConcrete && (
           <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
@@ -723,6 +821,36 @@ export function TakeoffFactsFields({
                 <strong>{concreteSuggestion.buildingSlabTrips} trips</strong>
               </p>
             )}
+            {showPrivatePavement && (
+              <p
+                className={
+                  showGradeBeams || showBuildingSlab ? "mt-1" : undefined
+                }
+              >
+                Private pavement: ceil(
+                {Number(privatePavementYd3).toLocaleString()} /{" "}
+                {yd3PrivatePavementDivisor.toLocaleString()}) ={" "}
+                <strong>
+                  {concreteSuggestion.privatePavementTrips} trips
+                </strong>
+              </p>
+            )}
+            {showPublicPavement && (
+              <p
+                className={
+                  showGradeBeams || showBuildingSlab || showPrivatePavement
+                    ? "mt-1"
+                    : undefined
+                }
+              >
+                Public pavement: ceil(
+                {Number(publicPavementYd3).toLocaleString()} /{" "}
+                {yd3PublicPavementDivisor.toLocaleString()}) ={" "}
+                <strong>
+                  {concreteSuggestion.publicPavementTrips} trips
+                </strong>
+              </p>
+            )}
             <p className="mt-1 font-medium">
               Total concrete:{" "}
               {[
@@ -730,6 +858,12 @@ export function TakeoffFactsFields({
                   ? concreteSuggestion.gradeBeamsPierCapsTrips
                   : null,
                 showBuildingSlab ? concreteSuggestion.buildingSlabTrips : null,
+                showPrivatePavement
+                  ? concreteSuggestion.privatePavementTrips
+                  : null,
+                showPublicPavement
+                  ? concreteSuggestion.publicPavementTrips
+                  : null,
               ]
                 .filter((x) => x != null)
                 .join(" + ")}{" "}

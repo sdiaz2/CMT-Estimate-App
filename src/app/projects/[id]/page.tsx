@@ -122,6 +122,11 @@ export default async function ProjectSetupPage({
                 project.groutBaseplatesInSpecialInspection,
               buildingPadSf: project.buildingPadSf,
               ft2PerTripGroutBaseplates: project.ft2PerTripGroutBaseplates,
+              structuralSteelBuildingSf: project.structuralSteelBuildingSf,
+              structuralSteelSfPerTrip: project.structuralSteelSfPerTrip,
+              structuralSteelFinalInspectionTrips:
+                project.structuralSteelFinalInspectionTrips,
+              structureLevelCount: project.structureLevelCount,
             }}
           />
         </div>

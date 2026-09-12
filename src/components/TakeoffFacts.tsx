@@ -13,6 +13,9 @@ import {
   DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
   DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
   DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING,
+  DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS,
+  DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP,
+  DEFAULT_STRUCTURE_LEVEL_COUNT,
   DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
   DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT,
   MIN_TRIPS_BUILDING_SLAB,
@@ -24,6 +27,7 @@ import {
   suggestFoundationTrips,
   suggestGroutTrips,
   suggestMasonryTrips,
+  suggestStructuralSteelTrips,
   type PierType,
 } from "@/lib/heuristics";
 
@@ -69,6 +73,10 @@ export type TakeoffFactsValues = {
   groutBaseplatesInSpecialInspection?: boolean;
   buildingPadSf?: number | null;
   ft2PerTripGroutBaseplates?: number | null;
+  structuralSteelBuildingSf?: number | null;
+  structuralSteelSfPerTrip?: number | null;
+  structuralSteelFinalInspectionTrips?: number | null;
+  structureLevelCount?: number | null;
 };
 
 /** Shared Takeoff / Project facts fields (used inside a parent <form>). */
@@ -147,6 +155,19 @@ export function TakeoffFactsFields({
     values.ft2PerTripGroutBaseplates > 0
       ? values.ft2PerTripGroutBaseplates
       : DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES;
+  const structuralSteelSfDivisor =
+    values?.structuralSteelSfPerTrip && values.structuralSteelSfPerTrip > 0
+      ? values.structuralSteelSfPerTrip
+      : DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP;
+  const structuralSteelFinalTrips =
+    values?.structuralSteelFinalInspectionTrips != null &&
+    values.structuralSteelFinalInspectionTrips >= 0
+      ? values.structuralSteelFinalInspectionTrips
+      : DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS;
+  const structureLevelCount =
+    values?.structureLevelCount != null && values.structureLevelCount >= 1
+      ? Math.floor(values.structureLevelCount)
+      : DEFAULT_STRUCTURE_LEVEL_COUNT;
   const limeTreated = !!values?.limeTreatedPavementSubgrade;
   const sidewalksBunched = !!values?.sidewalksBunchedTogether;
 
@@ -225,6 +246,14 @@ export function TakeoffFactsFields({
   });
   const showGrout = groutSuggestion.trips > 0;
   const groutBaseplates = !!values?.groutBaseplatesInSpecialInspection;
+  const steelSuggestion = suggestStructuralSteelTrips({
+    structuralSteelBuildingSf: values?.structuralSteelBuildingSf,
+    buildingAreaSf: values?.buildingAreaSf,
+    structuralSteelSfPerTrip: structuralSteelSfDivisor,
+    structuralSteelFinalInspectionTrips: structuralSteelFinalTrips,
+    structureLevelCount,
+  });
+  const showSteel = steelSuggestion.trips > 0;
   const showBuilding = (buildingSf ?? 0) > 0;
   const showPavement =
     limeTreated ? (pavementSf ?? 0) > 0 : (pavementLf ?? 0) > 0;
@@ -262,8 +291,14 @@ export function TakeoffFactsFields({
           buildings; enclosures 1 trip each. High-Strength Grout: 1 trip /{" "}
           <strong>{DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES.toLocaleString()}</strong>{" "}
           ft² building pad when baseplates are in special inspection (pad falls
-          back to building area). Suggestions never lock — edit freely after
-          Apply.
+          back to building area). Structural Steel Inspections: 1 trip /{" "}
+          <strong>
+            {DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP.toLocaleString()}
+          </strong>{" "}
+          ft² +{" "}
+          <strong>{DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS}</strong>{" "}
+          final × structure levels (steel SF falls back to building area).
+          Suggestions never lock — edit freely after Apply.
         </p>
       </div>
 
@@ -1186,6 +1221,117 @@ export function TakeoffFactsFields({
               {groutSuggestion.padSfSource === "buildingAreaSf"
                 ? " (using building area)"
                 : ""}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-slate-200 pt-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          Structural Steel Inspections
+        </p>
+        <p className="mb-3 text-xs text-slate-500">
+          Per level: one (1) trip for every{" "}
+          <strong>
+            {DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP.toLocaleString()}
+          </strong>{" "}
+          ft² plus{" "}
+          <strong>{DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS}</strong>{" "}
+          final — then multiply by structure levels. Applied to{" "}
+          <strong>Structural Steel Inspections</strong> only. Optional Bolting /
+          Welding / NDT breakouts can be added manually. Steel building SF
+          (typically floor plate) falls back to building area when blank. Final
+          is only added when area &gt; 0.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Structural steel building (SF)
+            </span>
+            <input
+              name="structuralSteelBuildingSf"
+              type="number"
+              step="any"
+              min="0"
+              defaultValue={
+                values?.structuralSteelBuildingSf != null &&
+                values.structuralSteelBuildingSf > 0
+                  ? String(values.structuralSteelBuildingSf)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 100000 — blank uses building area"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              typically floor plate SF; falls back to building area when blank
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Structure levels
+            </span>
+            <input
+              name="structureLevelCount"
+              type="number"
+              step="1"
+              min="1"
+              defaultValue={String(structureLevelCount)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 1 (min 1); multiplies per-level trips
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              SF per trip (structural steel)
+            </span>
+            <input
+              name="structuralSteelSfPerTrip"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(structuralSteelSfDivisor)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 20,000
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Final inspection trips (per level)
+            </span>
+            <input
+              name="structuralSteelFinalInspectionTrips"
+              type="number"
+              step="1"
+              min="0"
+              defaultValue={String(structuralSteelFinalTrips)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              default 1 (added only when area &gt; 0)
+            </span>
+          </label>
+        </div>
+        {showSteel && (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            <p>
+              {steelSuggestion.structureLevelCount} levels × (ceil(
+              {steelSuggestion.sf.toLocaleString()} /{" "}
+              {steelSuggestion.sfPerTrip.toLocaleString()}) +{" "}
+              {steelSuggestion.finalTripsPerLevel} final) ={" "}
+              {steelSuggestion.structureLevelCount} ×{" "}
+              {steelSuggestion.perLevelTrips} ={" "}
+              <strong>{steelSuggestion.trips} trips</strong>
+              {steelSuggestion.sfSource === "buildingAreaSf"
+                ? " (using building area)"
+                : ""}
+            </p>
+            <p className="mt-1 text-xs text-amber-900/80">
+              Applied only to Structural Steel Inspections when that parent is in
+              scope.
             </p>
           </div>
         )}

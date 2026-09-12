@@ -25,6 +25,9 @@ import {
   DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
   DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
   DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING,
+  DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS,
+  DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP,
+  DEFAULT_STRUCTURE_LEVEL_COUNT,
   DEFAULT_YD3_PER_TRIP_GRADE_BEAMS,
   DEFAULT_YD3_PER_TRIP_BUILDING_SLAB,
   DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT,
@@ -40,11 +43,13 @@ import {
   hasFoundationTakeoff,
   hasGroutTakeoff,
   hasMasonryTakeoff,
+  hasStructuralSteelTakeoff,
   isCipDeepFoundationsParent,
   isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
   isHighStrengthGroutParent,
   isMasonryTestingParent,
+  isStructuralSteelParent,
   masonryTripRuleLabels,
   parseDrivers,
   suggestConcreteTrips,
@@ -52,6 +57,8 @@ import {
   suggestFoundationTrips,
   suggestGroutTrips,
   suggestMasonryTrips,
+  suggestStructuralSteelTrips,
+  structuralSteelTripRuleLabel,
   takeoffFromProject,
 } from "@/lib/heuristics";
 
@@ -102,6 +109,9 @@ export default async function FieldPage({
   const groutSuggestion = suggestGroutTrips(takeoff);
   const groutLabel = groutTripRuleLabel(takeoff);
   const groutTakeoffApplies = hasGroutTakeoff(takeoff);
+  const steelSuggestion = suggestStructuralSteelTrips(takeoff);
+  const steelLabel = structuralSteelTripRuleLabel(takeoff);
+  const steelTakeoffApplies = hasStructuralSteelTakeoff(takeoff);
   const buildingSf = takeoff.buildingAreaSf ?? 0;
   const pavementSf = takeoff.pavementAreaSf ?? 0;
   const pavementLf = takeoff.pavementSubgradeLf ?? 0;
@@ -124,6 +134,9 @@ export default async function FieldPage({
   );
   const hasGroutTesting = fieldParents.some((p) =>
     isHighStrengthGroutParent(p.catalog.name)
+  );
+  const hasStructuralSteel = fieldParents.some((p) =>
+    isStructuralSteelParent(p.catalog.name)
   );
   const takeoffApplies = hasEarthworkTakeoff(takeoff);
 
@@ -211,6 +224,11 @@ export default async function FieldPage({
                 project.groutBaseplatesInSpecialInspection,
               buildingPadSf: project.buildingPadSf,
               ft2PerTripGroutBaseplates: project.ft2PerTripGroutBaseplates,
+              structuralSteelBuildingSf: project.structuralSteelBuildingSf,
+              structuralSteelSfPerTrip: project.structuralSteelSfPerTrip,
+              structuralSteelFinalInspectionTrips:
+                project.structuralSteelFinalInspectionTrips,
+              structureLevelCount: project.structureLevelCount,
             }}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -283,6 +301,17 @@ export default async function FieldPage({
                   : " (from building pad)"}
               </p>
             )}
+            {steelTakeoffApplies && (
+              <p className="text-xs text-slate-600">
+                Structural Steel Inspections preview:{" "}
+                <strong>{steelSuggestion.trips} trips</strong> (
+                {steelSuggestion.structureLevelCount} levels ×{" "}
+                {steelSuggestion.perLevelTrips}
+                {steelSuggestion.sfSource === "buildingAreaSf"
+                  ? "; SF from building area"
+                  : ""})
+              </p>
+            )}
           </div>
         </form>
       </section>
@@ -306,6 +335,7 @@ export default async function FieldPage({
             );
             const isMasonry = isMasonryTestingParent(parent.catalog.name);
             const isGrout = isHighStrengthGroutParent(parent.catalog.name);
+            const isSteel = isStructuralSteelParent(parent.catalog.name);
             const displayDrivers =
               isEarthwork && takeoffApplies && n(drivers.trips) === 0
                 ? { ...drivers, trips: suggestion.total }
@@ -325,7 +355,11 @@ export default async function FieldPage({
                           groutTakeoffApplies &&
                           n(drivers.trips) === 0
                         ? { ...drivers, trips: groutSuggestion.trips }
-                        : drivers;
+                        : isSteel &&
+                            steelTakeoffApplies &&
+                            n(drivers.trips) === 0
+                          ? { ...drivers, trips: steelSuggestion.trips }
+                          : drivers;
 
             return (
               <section
@@ -526,6 +560,29 @@ export default async function FieldPage({
                   </div>
                 )}
 
+                {isSteel && (
+                  <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <p className="font-medium">{steelLabel}</p>
+                    {steelTakeoffApplies && (
+                      <p className="mt-1 text-sm">
+                        {steelSuggestion.structureLevelCount} levels × (ceil(SF/
+                        {steelSuggestion.sfPerTrip.toLocaleString()})+
+                        {steelSuggestion.finalTripsPerLevel} final)
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-amber-900/80">
+                      Per level: 1 trip /{" "}
+                      {DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP.toLocaleString()}{" "}
+                      ft² + {DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS}{" "}
+                      final, then × structure levels (default{" "}
+                      {DEFAULT_STRUCTURE_LEVEL_COUNT}). Steel SF falls back to
+                      building area. Apply suggestions sets Trips and cascades
+                      hours (~4 hr/trip) and Vehicle. Optional Bolting/Welding/NDT
+                      breakouts do not use this rule. Numbers stay editable.
+                    </p>
+                  </div>
+                )}
+
                 <form
                   action={updateParentDrivers.bind(null, id, parent.id)}
                   className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8"
@@ -619,6 +676,17 @@ export default async function FieldPage({
           &quot;grout baseplates in special inspection&quot; and enter building
           pad SF (or rely on building area). Default{" "}
           {DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES.toLocaleString()} ft²/trip.
+        </p>
+      )}
+
+      {hasStructuralSteel && !steelTakeoffApplies && (
+        <p className="mt-4 text-xs text-slate-500">
+          Tip: for Structural Steel Inspections, enter steel building SF (or rely
+          on building area) and structure levels (default{" "}
+          {DEFAULT_STRUCTURE_LEVEL_COUNT}). Per level:{" "}
+          {DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP.toLocaleString()} SF/trip +{" "}
+          {DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS} final; total = levels ×
+          per-level trips.
         </p>
       )}
     </div>

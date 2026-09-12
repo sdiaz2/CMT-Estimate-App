@@ -282,6 +282,41 @@ trips = groutBaseplatesInSpecialInspection && padSf > 0
 
 Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the High-Strength Grout parent.
 
+### Structural Steel Inspections — trip suggestions
+
+Parent: **Structural Steel Inspections** (primary). Apply suggestions sets **Trips** and cascades Structural Steel Inspections hours (~4 hr/trip) and Vehicle — same pattern as other field parents.
+
+Optional catalog breakouts **Structural Steel (Bolting)**, **Structural Steel (Welding)**, and **Structural Steel (NDT)** remain available for manual scope only — they do **not** receive this trip rule, and relatedHints no longer push all three subtypes by default.
+
+**Rule — Per level (area + final), × structure levels**
+
+For each structure level: one (1) trip for every 20,000 ft² plus final inspection trip(s) (default 1). Total = levels × per-level trips.
+
+| Input | Notes |
+|-------|--------|
+| Structural steel building (SF) | `structuralSteelBuildingSf` — typically floor plate / building SF; if null/blank, falls back to `buildingAreaSf` |
+| Structure levels | `structureLevelCount` — Int, **default 1**, min 1 |
+| SF per trip | Editable; **default 20,000** (`structuralSteelSfPerTrip`) |
+| Final inspection trips | Editable; **default 1** (`structuralSteelFinalInspectionTrips`) per level — added only when area &gt; 0 |
+
+**Formula:**
+
+```
+sf = structuralSteelBuildingSf > 0 ? structuralSteelBuildingSf : buildingAreaSf
+perLevelTrips = sf > 0 ? ceil(sf / structuralSteelSfPerTrip) + structuralSteelFinalInspectionTrips : 0
+trips = structureLevelCount * perLevelTrips
+```
+
+When `sf` is 0: `trips = 0` (no final alone).
+
+**Examples:**
+- 100,000 SF, 1 level → ceil(5) + 1 = **6 trips**
+- 100,000 SF, 3 levels → 3 × 6 = **18 trips**
+
+Amber UI shows: `{levels} levels × (ceil(SF/20000)+1 final)`.
+
+Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Structural Steel Inspections parent.
+
 ## Assumptions
 
 - Heuristic suggestions never lock numbers

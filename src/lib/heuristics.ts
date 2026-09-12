@@ -50,6 +50,10 @@ export type ProjectTakeoff = {
   groutBaseplatesInSpecialInspection?: boolean;
   buildingPadSf?: number | null;
   ft2PerTripGroutBaseplates?: number | null;
+  structuralSteelBuildingSf?: number | null;
+  structuralSteelSfPerTrip?: number | null;
+  structuralSteelFinalInspectionTrips?: number | null;
+  structureLevelCount?: number | null;
 };
 
 /**
@@ -1215,6 +1219,167 @@ export function isHighStrengthGroutParent(name: string): boolean {
   );
 }
 
+
+export const STRUCTURAL_STEEL_HOURS_PER_TRIP = 4;
+
+export const DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP = 20000;
+export const DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS = 1;
+export const DEFAULT_STRUCTURE_LEVEL_COUNT = 1;
+
+/**
+ * Effective structural steel building SF: dedicated structuralSteelBuildingSf when set (>0),
+ * else buildingAreaSf.
+ */
+export function effectiveStructuralSteelSf(
+  takeoff: ProjectTakeoff | null | undefined
+): number {
+  const dedicated = n(takeoff?.structuralSteelBuildingSf, 0);
+  if (dedicated > 0) return dedicated;
+  return n(takeoff?.buildingAreaSf, 0);
+}
+
+export type StructuralSteelTripSuggestion = {
+  trips: number;
+  perLevelTrips: number;
+  areaTripsPerLevel: number;
+  finalTripsPerLevel: number;
+  structureLevelCount: number;
+  sf: number;
+  sfPerTrip: number;
+  finalInspectionTrips: number;
+  sfSource: "structuralSteelBuildingSf" | "buildingAreaSf" | "none";
+};
+
+/**
+ * Structural Steel Inspections — trip rule:
+ *
+ * Per structure level: one (1) trip for every 20,000 ft² plus final inspection trips (default 1).
+ * Multiply by structureLevelCount when multiple levels are present.
+ *
+ *   sf = structuralSteelBuildingSf > 0 ? structuralSteelBuildingSf : buildingAreaSf
+ *   perLevelTrips = sf > 0 ? ceil(sf / structuralSteelSfPerTrip) + finalInspectionTrips : 0
+ *   trips = structureLevelCount * perLevelTrips
+ *
+ * structureLevelCount default 1, min 1.
+ * When sf is 0: trips = 0 (no final alone).
+ * Wired ONLY to parent "Structural Steel Inspections".
+ *
+ * Example: 100,000 SF, 1 level → 6; same SF, 3 levels → 18.
+ */
+export function suggestStructuralSteelTrips(
+  takeoff: ProjectTakeoff | null | undefined
+): StructuralSteelTripSuggestion {
+  const dedicated = n(takeoff?.structuralSteelBuildingSf, 0);
+  const sfSource: StructuralSteelTripSuggestion["sfSource"] =
+    dedicated > 0
+      ? "structuralSteelBuildingSf"
+      : n(takeoff?.buildingAreaSf, 0) > 0
+        ? "buildingAreaSf"
+        : "none";
+  const sf = effectiveStructuralSteelSf(takeoff);
+  const sfPerTrip =
+    n(takeoff?.structuralSteelSfPerTrip, 0) > 0
+      ? n(takeoff?.structuralSteelSfPerTrip)
+      : DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP;
+  const finalRaw = takeoff?.structuralSteelFinalInspectionTrips;
+  const finalInspectionTrips =
+    finalRaw != null && Number.isFinite(Number(finalRaw)) && Number(finalRaw) >= 0
+      ? Math.max(0, Math.floor(n(finalRaw)))
+      : DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS;
+  const levelsRaw = takeoff?.structureLevelCount;
+  const structureLevelCount = Math.max(
+    1,
+    levelsRaw != null && Number.isFinite(Number(levelsRaw)) && Number(levelsRaw) >= 1
+      ? Math.floor(n(levelsRaw))
+      : DEFAULT_STRUCTURE_LEVEL_COUNT
+  );
+
+  const areaTripsPerLevel = sf > 0 ? ceilTrips(sf, sfPerTrip) : 0;
+  const finalTripsPerLevel = sf > 0 ? finalInspectionTrips : 0;
+  const perLevelTrips = areaTripsPerLevel + finalTripsPerLevel;
+  const trips = perLevelTrips > 0 ? structureLevelCount * perLevelTrips : 0;
+
+  return {
+    trips,
+    perLevelTrips,
+    areaTripsPerLevel,
+    finalTripsPerLevel,
+    structureLevelCount,
+    sf,
+    sfPerTrip,
+    finalInspectionTrips,
+    sfSource,
+  };
+}
+
+export function hasStructuralSteelTakeoff(
+  takeoff: ProjectTakeoff | null | undefined
+): boolean {
+  return suggestStructuralSteelTrips(takeoff).trips > 0;
+}
+
+export function structuralSteelTripRuleLabel(
+  takeoff: ProjectTakeoff | null | undefined
+): string {
+  const suggestion = suggestStructuralSteelTrips(takeoff);
+  const sourceNote =
+    suggestion.sfSource === "structuralSteelBuildingSf"
+      ? "structural steel building SF"
+      : suggestion.sfSource === "buildingAreaSf"
+        ? "building area SF (steel SF not set)"
+        : "building SF";
+
+  if (suggestion.sf <= 0) {
+    return `Structural Steel Inspections: per level ceil(SF / ${suggestion.sfPerTrip.toLocaleString()}) + ${suggestion.finalInspectionTrips} final, × structure levels (default 1). Enter steel building SF (or building area) to suggest trips.`;
+  }
+  return `Structural Steel Inspections: ${suggestion.structureLevelCount} level(s) × (ceil(${suggestion.sf.toLocaleString()} / ${suggestion.sfPerTrip.toLocaleString()}) + ${suggestion.finalTripsPerLevel} final) = ${suggestion.structureLevelCount} × ${suggestion.perLevelTrips} = ${suggestion.trips} trips from ${sourceNote}.`;
+}
+
+export function applyStructuralSteelTakeoffToDrivers(
+  drivers: Drivers,
+  takeoff: ProjectTakeoff | null | undefined
+): Drivers {
+  const suggestion = suggestStructuralSteelTrips(takeoff);
+  if (suggestion.trips <= 0) return { ...drivers };
+
+  const trips = suggestion.trips;
+  const hours = trips * STRUCTURAL_STEEL_HOURS_PER_TRIP;
+  const otHours = Math.round(hours * 0.15 * 10) / 10;
+  const source =
+    suggestion.sfSource === "structuralSteelBuildingSf"
+      ? "structuralSteelBuildingSf"
+      : "buildingAreaSf";
+  const notesDefault = `From takeoff: ${suggestion.structureLevelCount} levels × (ceil(${suggestion.sf} / ${suggestion.sfPerTrip}) + ${suggestion.finalTripsPerLevel} final) (${source}) = ${trips} trips`;
+
+  return {
+    ...drivers,
+    trips,
+    hours,
+    otHours,
+    days: trips,
+    vehicleTrips: trips,
+    notes:
+      typeof drivers.notes === "string" && drivers.notes.trim()
+        ? drivers.notes
+        : notesDefault,
+  };
+}
+
+export const STRUCTURAL_STEEL_INSPECTIONS_PARENT_NAME =
+  "Structural Steel Inspections";
+
+/** Primary steel parent only — not Bolting/Welding/NDT breakouts. */
+export function isStructuralSteelParent(name: string): boolean {
+  const lower = name.toLowerCase().trim();
+  return (
+    lower === "structural steel inspections" ||
+    (lower.includes("structural steel") && lower.includes("inspection") &&
+      !lower.includes("bolting") &&
+      !lower.includes("welding") &&
+      !lower.includes("ndt"))
+  );
+}
+
 export function suggestFieldLines(
   parentName: string,
   drivers: Drivers,
@@ -1243,6 +1408,11 @@ export function suggestFieldLines(
     hasGroutTakeoff(takeoff)
   ) {
     d = applyGroutTakeoffToDrivers(drivers, takeoff);
+  } else if (
+    isStructuralSteelParent(parentName) &&
+    hasStructuralSteelTakeoff(takeoff)
+  ) {
+    d = applyStructuralSteelTakeoffToDrivers(drivers, takeoff);
   }
 
   const trips = n(d.trips, 0);
@@ -1304,6 +1474,19 @@ export function suggestFieldLines(
   } else if (name.includes("grout")) {
     if (hours > 0)
       lines.push({ description: "High-Strength Grout Testing", quantity: hours, units: "hours", trips, isLab: false });
+    if (vehicleTrips > 0)
+      lines.push({ description: "Vehicle Charge", quantity: vehicleTrips, units: "each", trips: vehicleTrips, isLab: false });
+  } else if (
+    name.includes("structural steel") &&
+    name.includes("inspection") &&
+    !name.includes("bolting") &&
+    !name.includes("welding") &&
+    !name.includes("ndt")
+  ) {
+    if (hours > 0)
+      lines.push({ description: "Structural Steel Inspections", quantity: hours, units: "hours", trips, isLab: false });
+    if (otHours > 0)
+      lines.push({ description: "Structural Steel Inspections (OT)", quantity: otHours, units: "hours", trips: null, isLab: false });
     if (vehicleTrips > 0)
       lines.push({ description: "Vehicle Charge", quantity: vehicleTrips, units: "each", trips: vehicleTrips, isLab: false });
   } else if (name.includes("bolting")) {
@@ -1535,6 +1718,10 @@ export function takeoffFromProject(project: {
   groutBaseplatesInSpecialInspection?: boolean;
   buildingPadSf?: number | null;
   ft2PerTripGroutBaseplates?: number | null;
+  structuralSteelBuildingSf?: number | null;
+  structuralSteelSfPerTrip?: number | null;
+  structuralSteelFinalInspectionTrips?: number | null;
+  structureLevelCount?: number | null;
 }): ProjectTakeoff {
   return {
     buildingAreaSf: project.buildingAreaSf ?? null,
@@ -1592,5 +1779,16 @@ export function takeoffFromProject(project: {
     ft2PerTripGroutBaseplates:
       project.ft2PerTripGroutBaseplates ??
       DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
+    structuralSteelBuildingSf: project.structuralSteelBuildingSf ?? null,
+    structuralSteelSfPerTrip:
+      project.structuralSteelSfPerTrip ??
+      DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP,
+    structuralSteelFinalInspectionTrips:
+      project.structuralSteelFinalInspectionTrips ??
+      DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS,
+    structureLevelCount:
+      project.structureLevelCount != null && project.structureLevelCount >= 1
+        ? Math.floor(project.structureLevelCount)
+        : DEFAULT_STRUCTURE_LEVEL_COUNT,
   };
 }

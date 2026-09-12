@@ -9,8 +9,12 @@ import {
   applyFoundationTakeoffToDrivers,
   applyGroutTakeoffToDrivers,
   applyMasonryTakeoffToDrivers,
+  applyStructuralSteelTakeoffToDrivers,
   DEFAULT_EARTHWORK_SF_PER_TRIP,
   DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
+  DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS,
+  DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP,
+  DEFAULT_STRUCTURE_LEVEL_COUNT,
   DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT,
   DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING,
   DEFAULT_PAVEMENT_LF_PER_TRIP,
@@ -30,11 +34,13 @@ import {
   hasFoundationTakeoff,
   hasGroutTakeoff,
   hasMasonryTakeoff,
+  hasStructuralSteelTakeoff,
   isCipDeepFoundationsParent,
   isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
   isHighStrengthGroutParent,
   isMasonryTestingParent,
+  isStructuralSteelParent,
   missCheckPrompts,
   normalizePierType,
   parseDrivers,
@@ -139,6 +145,22 @@ function takeoffDataFromForm(formData: FormData) {
   const ft2PerTripGroutBaseplatesRaw = parseOptionalFloat(
     formData,
     "ft2PerTripGroutBaseplates"
+  );
+  const structuralSteelBuildingSf = parseOptionalFloat(
+    formData,
+    "structuralSteelBuildingSf"
+  );
+  const structuralSteelSfPerTripRaw = parseOptionalFloat(
+    formData,
+    "structuralSteelSfPerTrip"
+  );
+  const structuralSteelFinalInspectionTripsRaw = parseOptionalFloat(
+    formData,
+    "structuralSteelFinalInspectionTrips"
+  );
+  const structureLevelCountRaw = parseOptionalFloat(
+    formData,
+    "structureLevelCount"
   );
   return {
     buildingAreaSf,
@@ -254,6 +276,21 @@ function takeoffDataFromForm(formData: FormData) {
       ft2PerTripGroutBaseplatesRaw > 0
         ? ft2PerTripGroutBaseplatesRaw
         : DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
+    structuralSteelBuildingSf,
+    structuralSteelSfPerTrip:
+      structuralSteelSfPerTripRaw !== null &&
+      structuralSteelSfPerTripRaw > 0
+        ? structuralSteelSfPerTripRaw
+        : DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP,
+    structuralSteelFinalInspectionTrips:
+      structuralSteelFinalInspectionTripsRaw !== null &&
+      structuralSteelFinalInspectionTripsRaw >= 0
+        ? structuralSteelFinalInspectionTripsRaw
+        : DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS,
+    structureLevelCount:
+      structureLevelCountRaw !== null && structureLevelCountRaw >= 1
+        ? Math.floor(structureLevelCountRaw)
+        : DEFAULT_STRUCTURE_LEVEL_COUNT,
   };
 }
 
@@ -439,6 +476,15 @@ export async function applyFieldSuggestions(projectId: string, parentId: string)
       where: { id: parentId },
       data: { drivers: JSON.stringify(drivers) },
     });
+  } else if (
+    isStructuralSteelParent(parent.catalog.name) &&
+    hasStructuralSteelTakeoff(takeoff)
+  ) {
+    drivers = applyStructuralSteelTakeoffToDrivers(drivers, takeoff);
+    await prisma.projectParent.update({
+      where: { id: parentId },
+      data: { drivers: JSON.stringify(drivers) },
+    });
   }
 
   const suggestions = suggestFieldLines(parent.catalog.name, drivers, takeoff);
@@ -515,6 +561,15 @@ export async function applyAllFieldSuggestions(projectId: string) {
       hasGroutTakeoff(takeoff)
     ) {
       drivers = applyGroutTakeoffToDrivers(drivers, takeoff);
+      await prisma.projectParent.update({
+        where: { id: parent.id },
+        data: { drivers: JSON.stringify(drivers) },
+      });
+    } else if (
+      isStructuralSteelParent(parent.catalog.name) &&
+      hasStructuralSteelTakeoff(takeoff)
+    ) {
+      drivers = applyStructuralSteelTakeoffToDrivers(drivers, takeoff);
       await prisma.projectParent.update({
         where: { id: parent.id },
         data: { drivers: JSON.stringify(drivers) },

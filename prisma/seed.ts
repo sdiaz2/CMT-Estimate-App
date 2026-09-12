@@ -156,41 +156,55 @@ const catalog: CatalogSeed[] = [
     ],
   },
   {
-    name: "Structural Steel (Bolting)",
+    name: "Structural Steel Inspections",
     sortOrder: 13,
     category: "field",
-    relatedHints: ["Structural Steel (Welding)", "Structural Steel (NDT)"],
-    defaultDrivers: { trips: 5, hours: 20, vehicleTrips: 5 },
+    relatedHints: [],
+    defaultDrivers: { trips: 6, hours: 24, vehicleTrips: 6 },
     templates: [
-      { description: "Structural Steel Bolting Observation", units: "hours", qtyHint: "hours", sortOrder: 1 },
+      { description: "Structural Steel Inspections", units: "hours", qtyHint: "hours", sortOrder: 1 },
       { description: "Vehicle Charge", units: "each", includesVehicle: true, qtyHint: "vehicleTrips", sortOrder: 2 },
     ],
   },
   {
-    name: "Structural Steel (Welding)",
+    // Optional breakout — add only if bolting is scoped separately from primary Structural Steel Inspections
+    name: "Structural Steel (Bolting)",
     sortOrder: 14,
     category: "field",
-    relatedHints: ["Structural Steel (Bolting)", "Structural Steel (NDT)"],
+    relatedHints: [],
     defaultDrivers: { trips: 5, hours: 20, vehicleTrips: 5 },
     templates: [
-      { description: "Structural Steel Welding Observation", units: "hours", qtyHint: "hours", sortOrder: 1 },
+      { description: "Structural Steel Bolting Observation", units: "hours", qtyHint: "Optional breakout — add only if scoped separately from Structural Steel Inspections", sortOrder: 1 },
       { description: "Vehicle Charge", units: "each", includesVehicle: true, qtyHint: "vehicleTrips", sortOrder: 2 },
     ],
   },
   {
-    name: "Structural Steel (NDT)",
+    // Optional breakout — add only if welding is scoped separately from primary Structural Steel Inspections
+    name: "Structural Steel (Welding)",
     sortOrder: 15,
     category: "field",
-    relatedHints: ["Structural Steel (Welding)"],
+    relatedHints: [],
+    defaultDrivers: { trips: 5, hours: 20, vehicleTrips: 5 },
+    templates: [
+      { description: "Structural Steel Welding Observation", units: "hours", qtyHint: "Optional breakout — add only if scoped separately from Structural Steel Inspections", sortOrder: 1 },
+      { description: "Vehicle Charge", units: "each", includesVehicle: true, qtyHint: "vehicleTrips", sortOrder: 2 },
+    ],
+  },
+  {
+    // Optional breakout — add only if NDT is scoped separately from primary Structural Steel Inspections
+    name: "Structural Steel (NDT)",
+    sortOrder: 16,
+    category: "field",
+    relatedHints: [],
     defaultDrivers: { trips: 3, hours: 12, vehicleTrips: 3 },
     templates: [
-      { description: "Structural Steel NDT", units: "hours", qtyHint: "hours", sortOrder: 1 },
+      { description: "Structural Steel NDT", units: "hours", qtyHint: "Optional breakout — add only if scoped separately from Structural Steel Inspections", sortOrder: 1 },
       { description: "Vehicle Charge", units: "each", includesVehicle: true, qtyHint: "vehicleTrips", sortOrder: 2 },
     ],
   },
   {
     name: "Fire-resistant (Penetrations & joints) Testing & Observations",
-    sortOrder: 16,
+    sortOrder: 17,
     category: "field",
     relatedHints: [],
     defaultDrivers: { trips: 4, hours: 16, vehicleTrips: 4 },
@@ -201,7 +215,7 @@ const catalog: CatalogSeed[] = [
   },
   {
     name: "Vapor Emission Testing",
-    sortOrder: 17,
+    sortOrder: 18,
     category: "field",
     relatedHints: [],
     defaultDrivers: { trips: 2, hours: 8, vehicleTrips: 2 },
@@ -212,7 +226,7 @@ const catalog: CatalogSeed[] = [
   },
   {
     name: "EIFS Observations (Lumpsum)",
-    sortOrder: 18,
+    sortOrder: 19,
     category: "field",
     relatedHints: [],
     defaultDrivers: { trips: 1, hours: 0 },
@@ -222,7 +236,7 @@ const catalog: CatalogSeed[] = [
   },
   {
     name: "Laboratory Testing",
-    sortOrder: 19,
+    sortOrder: 20,
     category: "lab",
     relatedHints: [],
     defaultDrivers: {},
@@ -239,7 +253,7 @@ const catalog: CatalogSeed[] = [
   },
   {
     name: "Admin support note (8%)",
-    sortOrder: 20,
+    sortOrder: 21,
     category: "admin",
     relatedHints: ["Project Administration"],
     defaultDrivers: { hours: 0 },

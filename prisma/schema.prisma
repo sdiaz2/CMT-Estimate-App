@@ -119,6 +119,14 @@ model Project {
   buildingPadSf               Float?
   /// SF of building pad per High-Strength Grout trip when baseplates are in special inspection (default 17000)
   ft2PerTripGroutBaseplates   Float    @default(17000)
+  /// Dedicated structural steel building area (SF); if null, fall back to buildingAreaSf
+  structuralSteelBuildingSf   Float?
+  /// SF of building per Structural Steel inspection trip (default 20000)
+  structuralSteelSfPerTrip    Float    @default(20000)
+  /// Final inspection trips added when area-based steel trips apply (default 1)
+  structuralSteelFinalInspectionTrips Float @default(1)
+  /// Number of structure levels — steel trips are multiplied by this (default 1, min 1)
+  structureLevelCount         Int      @default(1)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
   parents                     ProjectParent[]

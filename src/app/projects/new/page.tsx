@@ -1,4 +1,5 @@
 import { createProject } from "@/lib/actions";
+import { TakeoffFactsFields } from "@/components/TakeoffFacts";
 import Link from "next/link";
 
 export default function NewProjectPage() {
@@ -58,6 +59,11 @@ export default function NewProjectPage() {
             placeholder="Schedule assumptions, exclusions, etc."
           />
         </label>
+
+        <div className="border-t border-slate-200 pt-4">
+          <TakeoffFactsFields />
+        </div>
+
         <div className="flex justify-end gap-2 pt-2">
           <Link
             href="/"

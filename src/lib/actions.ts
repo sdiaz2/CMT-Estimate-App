@@ -4,12 +4,46 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "./prisma";
 import {
+  applyEarthworkTakeoffToDrivers,
+  DEFAULT_EARTHWORK_SF_PER_TRIP,
+  isEarthworkTestingParent,
   missCheckPrompts,
   parseDrivers,
   parseHints,
   suggestFieldLines,
   suggestLabLines,
+  takeoffFromProject,
 } from "./heuristics";
+
+function parseOptionalFloat(formData: FormData, key: string): number | null {
+  const raw = formData.get(key);
+  if (raw === null || raw === "") return null;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : null;
+}
+
+function parseCheckbox(formData: FormData, key: string): boolean {
+  const v = formData.get(key);
+  return v === "true" || v === "on" || v === "1";
+}
+
+function takeoffDataFromForm(formData: FormData) {
+  const buildingAreaSf = parseOptionalFloat(formData, "buildingAreaSf");
+  const earthworkSfPerTripRaw = parseOptionalFloat(formData, "earthworkSfPerTrip");
+  return {
+    buildingAreaSf,
+    moistureConditionedSubgrade: parseCheckbox(formData, "moistureConditionedSubgrade"),
+    flexibleBaseCap: parseCheckbox(formData, "flexibleBaseCap"),
+    earthworkSfPerTrip:
+      earthworkSfPerTripRaw !== null && earthworkSfPerTripRaw > 0
+        ? earthworkSfPerTripRaw
+        : DEFAULT_EARTHWORK_SF_PER_TRIP,
+    moistureDepthNote: String(formData.get("moistureDepthNote") || "").trim(),
+    flexibleBaseThicknessNote: String(
+      formData.get("flexibleBaseThicknessNote") || ""
+    ).trim(),
+  };
+}
 
 export async function createProject(formData: FormData) {
   const name = String(formData.get("name") || "").trim();
@@ -17,15 +51,17 @@ export async function createProject(formData: FormData) {
   const location = String(formData.get("location") || "").trim();
   const notes = String(formData.get("notes") || "").trim();
   const docsReceived = String(formData.get("docsReceived") || "").trim();
+  const takeoff = takeoffDataFromForm(formData);
 
   const project = await prisma.project.create({
-    data: { name, location, notes, docsReceived },
+    data: { name, location, notes, docsReceived, ...takeoff },
   });
 
   redirect(`/projects/${project.id}/scope`);
 }
 
 export async function updateProject(projectId: string, formData: FormData) {
+  const takeoff = takeoffDataFromForm(formData);
   await prisma.project.update({
     where: { id: projectId },
     data: {
@@ -33,10 +69,22 @@ export async function updateProject(projectId: string, formData: FormData) {
       location: String(formData.get("location") || "").trim(),
       notes: String(formData.get("notes") || "").trim(),
       docsReceived: String(formData.get("docsReceived") || "").trim(),
+      ...takeoff,
     },
   });
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}/scope`);
+}
+
+/** Save takeoff / project facts without leaving the current page. */
+export async function updateProjectTakeoff(projectId: string, formData: FormData) {
+  const takeoff = takeoffDataFromForm(formData);
+  await prisma.project.update({
+    where: { id: projectId },
+    data: takeoff,
+  });
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/field`);
 }
 
 export async function deleteProject(projectId: string) {
@@ -126,12 +174,26 @@ export async function updateParentDrivers(
 }
 
 export async function applyFieldSuggestions(projectId: string, parentId: string) {
+  const project = await prisma.project.findUniqueOrThrow({ where: { id: projectId } });
   const parent = await prisma.projectParent.findUniqueOrThrow({
     where: { id: parentId },
     include: { catalog: true, lineItems: true },
   });
-  const drivers = parseDrivers(parent.drivers);
-  const suggestions = suggestFieldLines(parent.catalog.name, drivers);
+  const takeoff = takeoffFromProject(project);
+  let drivers = parseDrivers(parent.drivers);
+
+  if (
+    isEarthworkTestingParent(parent.catalog.name) &&
+    (takeoff.buildingAreaSf ?? 0) > 0
+  ) {
+    drivers = applyEarthworkTakeoffToDrivers(drivers, takeoff);
+    await prisma.projectParent.update({
+      where: { id: parentId },
+      data: { drivers: JSON.stringify(drivers) },
+    });
+  }
+
+  const suggestions = suggestFieldLines(parent.catalog.name, drivers, takeoff);
 
   await prisma.lineItem.deleteMany({
     where: { projectParentId: parentId, isLab: false },
@@ -154,6 +216,8 @@ export async function applyFieldSuggestions(projectId: string, parentId: string)
 }
 
 export async function applyAllFieldSuggestions(projectId: string) {
+  const project = await prisma.project.findUniqueOrThrow({ where: { id: projectId } });
+  const takeoff = takeoffFromProject(project);
   const parents = await prisma.projectParent.findMany({
     where: { projectId },
     include: { catalog: true },
@@ -161,8 +225,18 @@ export async function applyAllFieldSuggestions(projectId: string) {
   });
   for (const parent of parents) {
     if (parent.catalog.category === "lab") continue;
-    const drivers = parseDrivers(parent.drivers);
-    const suggestions = suggestFieldLines(parent.catalog.name, drivers);
+    let drivers = parseDrivers(parent.drivers);
+    if (
+      isEarthworkTestingParent(parent.catalog.name) &&
+      (takeoff.buildingAreaSf ?? 0) > 0
+    ) {
+      drivers = applyEarthworkTakeoffToDrivers(drivers, takeoff);
+      await prisma.projectParent.update({
+        where: { id: parent.id },
+        data: { drivers: JSON.stringify(drivers) },
+      });
+    }
+    const suggestions = suggestFieldLines(parent.catalog.name, drivers, takeoff);
     await prisma.lineItem.deleteMany({
       where: { projectParentId: parent.id, isLab: false },
     });

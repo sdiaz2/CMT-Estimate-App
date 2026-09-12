@@ -25,10 +25,10 @@ SQLite file: prisma/dev.db via DATABASE_URL in .env
 | Route | Purpose |
 |-------|--------|
 | / | Project list |
-| /projects/new | Create (name, location, notes, docs received) |
-| /projects/[id] | Edit setup |
+| /projects/new | Create (name, location, notes, docs received, **takeoff facts**) |
+| /projects/[id] | Edit setup + takeoff facts |
 | /projects/[id]/scope | Parent tasks + miss-check |
-| /projects/[id]/field | Drivers + field lines (OT, vehicle) |
+| /projects/[id]/field | Takeoff panel + drivers + field lines (OT, vehicle) |
 | /projects/[id]/lab | Lab samples/tests |
 | /projects/[id]/worksheet | Pricing Tool re-key (CSV / copy / print) |
 
@@ -37,6 +37,26 @@ SQLite file: prisma/dev.db via DATABASE_URL in .env
 Columns: **Parent | Description | Quantity | Units | Trips**
 
 Re-key into Pricing Tool and enter rates there. Admin support note (8%) is a reminder only — never locked fees.
+
+## Guiding rules
+
+### Earthwork Testing & Observations — moisture-conditioned subgrade + flexible base cap
+
+When estimating earthwork for a building with **moisture-conditioned subgrade** and a **flexible base cap**:
+
+| Input | Notes |
+|-------|--------|
+| Building area (SF) | Takeoff / project facts |
+| Moisture depth / base thickness | Optional notes on the project |
+| SF per trip (divisor) | Editable; **typical 2,700–3,000**; **default 2,850** (middle) |
+
+**Formula:** `suggestedTrips = ceil(buildingAreaSf / earthworkSfPerTrip)`
+
+**Example:** 100,000 SF → ~34–37 trips across the range; at 2,850 → **36 trips**.
+
+On the Field step, the rule is shown near Earthwork drivers. **Apply suggestions** (for that parent or all) uses the rule when `buildingAreaSf > 0`, sets Trips, and cascades hours (~4 hr/trip), OT (~15%), gauge days, and vehicle trips. Quantities stay fully editable afterward.
+
+Flags `moistureConditionedSubgrade` and `flexibleBaseCap` document that the job matches this condition; the rule banner notes when they apply.
 
 ## Assumptions
 

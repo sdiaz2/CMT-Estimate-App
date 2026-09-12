@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { updateProject } from "@/lib/actions";
 import { StepNav } from "@/components/StepNav";
+import { TakeoffFactsFields } from "@/components/TakeoffFacts";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,20 @@ export default async function ProjectSetupPage({
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
           />
         </label>
+
+        <div className="border-t border-slate-200 pt-4">
+          <TakeoffFactsFields
+            values={{
+              buildingAreaSf: project.buildingAreaSf,
+              moistureConditionedSubgrade: project.moistureConditionedSubgrade,
+              flexibleBaseCap: project.flexibleBaseCap,
+              earthworkSfPerTrip: project.earthworkSfPerTrip,
+              moistureDepthNote: project.moistureDepthNote,
+              flexibleBaseThicknessNote: project.flexibleBaseThicknessNote,
+            }}
+          />
+        </div>
+
         <div className="flex justify-end">
           <button
             type="submit"

@@ -32,14 +32,26 @@ model LineTemplate {
 }
 
 model Project {
-  id           String   @id @default(cuid())
-  name         String
-  location     String   @default("")
-  notes        String   @default("")
-  docsReceived String   @default("")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  parents      ProjectParent[]
+  id                          String   @id @default(cuid())
+  name                        String
+  location                    String   @default("")
+  notes                       String   @default("")
+  docsReceived                String   @default("")
+  /// Building area takeoff (SF) for earthwork trip rule
+  buildingAreaSf              Float?
+  /// Moisture-conditioned subgrade under building
+  moistureConditionedSubgrade Boolean  @default(false)
+  /// Flexible base cap over moisture-conditioned subgrade
+  flexibleBaseCap             Boolean  @default(false)
+  /// SF of building area per earthwork trip (typical range 2700–3000; default mid 2850)
+  earthworkSfPerTrip          Float    @default(2850)
+  /// Optional note e.g. moisture conditioning depth
+  moistureDepthNote           String   @default("")
+  /// Optional note e.g. flexible base thickness
+  flexibleBaseThicknessNote   String   @default("")
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+  parents                     ProjectParent[]
 }
 
 model ProjectParent {

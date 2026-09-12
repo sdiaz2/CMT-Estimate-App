@@ -9,21 +9,113 @@ export type SuggestedLine = {
   notes?: string;
 };
 
+/** Project takeoff facts used by earthwork trip rule. */
+export type ProjectTakeoff = {
+  buildingAreaSf?: number | null;
+  moistureConditionedSubgrade?: boolean;
+  flexibleBaseCap?: boolean;
+  earthworkSfPerTrip?: number | null;
+};
+
+/** Typical hours per earthwork testing trip (seed default: 12 trips → 48 hours). */
+export const EARTHWORK_HOURS_PER_TRIP = 4;
+
+/** Default SF per trip (middle of 2700–3000 range). */
+export const DEFAULT_EARTHWORK_SF_PER_TRIP = 2850;
+
+export const EARTHWORK_SF_PER_TRIP_RANGE = { min: 2700, max: 3000 } as const;
+
 function n(v: unknown, fallback = 0): number {
   const x = typeof v === "number" ? v : Number(v);
   return Number.isFinite(x) ? x : fallback;
 }
 
+/**
+ * Earthwork Testing & Observations trip rule for moisture-conditioned subgrade
+ * with flexible base cap:
+ *   suggestedTrips = ceil(buildingSF / divisor)
+ * Divisor typical range 2700–3000 SF/trip; default 2850.
+ * Example: 100,000 SF / 2850 → 36 trips (~34–37 across the range).
+ */
+export function suggestEarthworkTrips(
+  buildingAreaSf: number,
+  earthworkSfPerTrip: number = DEFAULT_EARTHWORK_SF_PER_TRIP
+): number {
+  const sf = n(buildingAreaSf, 0);
+  const divisor = n(earthworkSfPerTrip, DEFAULT_EARTHWORK_SF_PER_TRIP);
+  if (sf <= 0 || divisor <= 0) return 0;
+  return Math.ceil(sf / divisor);
+}
+
+export function earthworkTripRuleLabel(
+  buildingAreaSf: number,
+  earthworkSfPerTrip: number = DEFAULT_EARTHWORK_SF_PER_TRIP
+): string {
+  const sf = n(buildingAreaSf, 0);
+  const divisor = n(earthworkSfPerTrip, DEFAULT_EARTHWORK_SF_PER_TRIP) || DEFAULT_EARTHWORK_SF_PER_TRIP;
+  const trips = suggestEarthworkTrips(sf, divisor);
+  if (sf <= 0) {
+    return `Rule: 1 trip / ${divisor} SF building (typical 2700–3000). Enter building area to suggest trips.`;
+  }
+  return `Rule: 1 trip / ${divisor} SF building → ${trips} trips from ${sf.toLocaleString()} SF`;
+}
+
+/**
+ * Merge takeoff-based earthwork trips into drivers and cascade hours /
+ * gauge / vehicle when trips are suggested from building area.
+ */
+export function applyEarthworkTakeoffToDrivers(
+  drivers: Drivers,
+  takeoff: ProjectTakeoff | null | undefined
+): Drivers {
+  const sf = n(takeoff?.buildingAreaSf, 0);
+  if (sf <= 0) return { ...drivers };
+
+  const divisor =
+    n(takeoff?.earthworkSfPerTrip, 0) > 0
+      ? n(takeoff?.earthworkSfPerTrip)
+      : DEFAULT_EARTHWORK_SF_PER_TRIP;
+  const trips = suggestEarthworkTrips(sf, divisor);
+  if (trips <= 0) return { ...drivers };
+
+  const hours = trips * EARTHWORK_HOURS_PER_TRIP;
+  const otHours = Math.round(hours * 0.15 * 10) / 10;
+
+  return {
+    ...drivers,
+    trips,
+    hours,
+    otHours,
+    days: trips,
+    gaugeDays: trips,
+    vehicleTrips: trips,
+    notes:
+      typeof drivers.notes === "string" && drivers.notes.trim()
+        ? drivers.notes
+        : `From takeoff: ceil(${sf} / ${divisor}) = ${trips} trips (typical 2700–3000 SF/trip)`,
+  };
+}
+
+export function isEarthworkTestingParent(name: string): boolean {
+  return name.toLowerCase().includes("earthwork testing");
+}
+
 /** Rule-based field line suggestions from drivers. Always editable afterwards. */
 export function suggestFieldLines(
   parentName: string,
-  drivers: Drivers
+  drivers: Drivers,
+  takeoff?: ProjectTakeoff | null
 ): SuggestedLine[] {
-  const trips = n(drivers.trips, 0);
-  const hours = n(drivers.hours, 0);
-  const otHours = n(drivers.otHours, Math.round(hours * 0.15 * 10) / 10);
-  const vehicleTrips = n(drivers.vehicleTrips, trips);
-  const gaugeDays = n(drivers.gaugeDays, n(drivers.days, trips > 0 ? trips : 0));
+  let d = drivers;
+  if (isEarthworkTestingParent(parentName) && n(takeoff?.buildingAreaSf, 0) > 0) {
+    d = applyEarthworkTakeoffToDrivers(drivers, takeoff);
+  }
+
+  const trips = n(d.trips, 0);
+  const hours = n(d.hours, 0);
+  const otHours = n(d.otHours, Math.round(hours * 0.15 * 10) / 10);
+  const vehicleTrips = n(d.vehicleTrips, trips);
+  const gaugeDays = n(d.gaugeDays, n(d.days, trips > 0 ? trips : 0));
   const lines: SuggestedLine[] = [];
   const name = parentName.toLowerCase();
 
@@ -96,9 +188,9 @@ export function suggestFieldLines(
     if (vehicleTrips > 0)
       lines.push({ description: "Vehicle Charge", quantity: vehicleTrips, units: "each", trips: vehicleTrips, isLab: false });
   } else if (name.includes("floor-flatness") || name.includes("floor flatness")) {
-    const days = n(drivers.days, 0);
+    const days = n(d.days, 0);
     if (hours > 0 || days > 0) {
-      const qty = hours > 0 ? hours : n(drivers.days, 1);
+      const qty = hours > 0 ? hours : n(d.days, 1);
       lines.push({ description: "Floor-Flatness Testing", quantity: qty, units: hours > 0 ? "hours" : "day", trips, isLab: false });
     }
     if (vehicleTrips > 0)
@@ -255,4 +347,18 @@ export function parseHints(json: string): string[] {
   } catch {
     return [];
   }
+}
+
+export function takeoffFromProject(project: {
+  buildingAreaSf?: number | null;
+  moistureConditionedSubgrade?: boolean;
+  flexibleBaseCap?: boolean;
+  earthworkSfPerTrip?: number | null;
+}): ProjectTakeoff {
+  return {
+    buildingAreaSf: project.buildingAreaSf ?? null,
+    moistureConditionedSubgrade: project.moistureConditionedSubgrade ?? false,
+    flexibleBaseCap: project.flexibleBaseCap ?? false,
+    earthworkSfPerTrip: project.earthworkSfPerTrip ?? DEFAULT_EARTHWORK_SF_PER_TRIP,
+  };
 }

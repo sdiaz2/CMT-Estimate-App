@@ -286,55 +286,18 @@ export function TakeoffFactsFields({
   return (
     <div className={compact ? "space-y-3" : "space-y-4"}>
       <div>
-        <h3 className="text-sm font-semibold text-slate-900">
-          Takeoff / Project facts
+        <h3 className="text-sm font-semibold text-umber">
+          Quantities from the plans
         </h3>
-        <p className="mt-0.5 text-xs text-slate-500">
-          Earthwork trips = building + pavement (lime SF <em>or</em> non-lime LF) +
-          sidewalks + utility trench. Building default{" "}
-          <strong>{DEFAULT_EARTHWORK_SF_PER_TRIP.toLocaleString()}</strong>{" "}
-          SF/trip; lime pavement{" "}
-          <strong>{DEFAULT_PAVEMENT_SF_PER_TRIP.toLocaleString()}</strong>{" "}
-          SF/trip; non-lime pavement{" "}
-          <strong>{DEFAULT_PAVEMENT_LF_PER_TRIP}</strong> LF/trip; sidewalks{" "}
-          <strong>{DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP}</strong> LF (spread) /{" "}
-          <strong>{DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP}</strong> LF (bunched);
-          utility trench{" "}
-          <strong>{DEFAULT_UTILITY_TRENCH_LF_PER_TRIP}</strong> LF/trip (typical
-          150–175). Concrete: Rule A grade beams default{" "}
-          <strong>{DEFAULT_YD3_PER_TRIP_GRADE_BEAMS}</strong> yd³/trip (min{" "}
-          {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS}); Rule B slab{" "}
-          <strong>{DEFAULT_YD3_PER_TRIP_BUILDING_SLAB}</strong>; Rule C private{" "}
-          <strong>{DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT}</strong> / public{" "}
-          <strong>{DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT}</strong> (ceil only, no
-          min-2). Masonry: load-bearing CMU{" "}
-          <strong>{DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING.toLocaleString()}</strong>{" "}
-          SF/trip; elevator shaft{" "}
-          <strong>{DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT}</strong> ft/trip ×
-          buildings; enclosures 1 trip each. High-Strength Grout: 1 trip /{" "}
-          <strong>{DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES.toLocaleString()}</strong>{" "}
-          ft² building pad when baseplates are in special inspection (pad falls
-          back to building area). Structural Steel Inspections: 1 trip /{" "}
-          <strong>
-            {DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP.toLocaleString()}
-          </strong>{" "}
-          ft² +{" "}
-          <strong>{DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS}</strong>{" "}
-          final × structure levels (steel SF falls back to building area). Floor
-          Flatness: max(1 trip per slab-on-grade pour, 1 trip /{" "}
-          <strong>
-            {DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS.toLocaleString()}
-          </strong>{" "}
-          ft²; SF falls back to building area). Post-Tension:{" "}
-          <strong>2 × pours</strong> total trips (dedicated pour count falls
-          back to slab-on-grade). Suggestions never lock — edit freely after
-          Apply.
+        <p className="mt-1 text-sm text-umber-muted">
+          Enter quantities from the plans. Open a section only if that work is on this job —
+          suggestions stay editable after you apply them.
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-umber-soft">
             Building area (SF)
           </span>
           <input
@@ -345,12 +308,12 @@ export function TakeoffFactsFields({
             defaultValue={
               values?.buildingAreaSf != null ? String(values.buildingAreaSf) : ""
             }
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="input-soft mt-1.5 w-full text-sm"
             placeholder="e.g. 100000"
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-umber-soft">
             Building SF per trip
           </span>
           <input
@@ -359,32 +322,32 @@ export function TakeoffFactsFields({
             step="any"
             min="1"
             defaultValue={String(buildingDivisor)}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="input-soft mt-1.5 w-full text-sm"
           />
-          <span className="mt-0.5 block text-xs text-slate-500">
+          <span className="mt-0.5 block text-xs text-umber-faint">
             typical 2700–3000 (editable)
           </span>
         </label>
       </div>
 
       <div className="flex flex-wrap gap-4">
-        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+        <label className="inline-flex items-center gap-2 text-sm text-umber-soft">
           <input
             type="checkbox"
             name="moistureConditionedSubgrade"
             value="true"
             defaultChecked={!!values?.moistureConditionedSubgrade}
-            className="rounded border-slate-300"
+            className="rounded accent-terracotta"
           />
           Moisture-conditioned subgrade
         </label>
-        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+        <label className="inline-flex items-center gap-2 text-sm text-umber-soft">
           <input
             type="checkbox"
             name="flexibleBaseCap"
             value="true"
             defaultChecked={!!values?.flexibleBaseCap}
-            className="rounded border-slate-300"
+            className="rounded accent-terracotta"
           />
           Flexible base cap
         </label>
@@ -392,49 +355,48 @@ export function TakeoffFactsFields({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-umber-soft">
             Moisture depth note (optional)
           </span>
           <input
             name="moistureDepthNote"
             type="text"
             defaultValue={values?.moistureDepthNote ?? ""}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="input-soft mt-1.5 w-full text-sm"
             placeholder="e.g. 8 in moisture conditioning"
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-umber-soft">
             Flexible base thickness note (optional)
           </span>
           <input
             name="flexibleBaseThicknessNote"
             type="text"
             defaultValue={values?.flexibleBaseThicknessNote ?? ""}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="input-soft mt-1.5 w-full text-sm"
             placeholder="e.g. 6 in flexible base"
           />
         </label>
       </div>
 
-      <div className="border-t border-slate-200 pt-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-          Pavement subgrade
-        </p>
-        <label className="mb-3 inline-flex items-center gap-2 text-sm text-slate-700">
+      <details className="takeoff-section" open={compact}>
+        <summary>Pavement</summary>
+
+        <label className="mb-3 inline-flex items-center gap-2 text-sm text-umber-soft">
           <input
             type="checkbox"
             name="limeTreatedPavementSubgrade"
             value="true"
             defaultChecked={limeTreated}
-            className="rounded border-slate-300"
+            className="rounded accent-terracotta"
           />
           Lime-treated pavement subgrade (uses SF rule; otherwise LF rule)
         </label>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Pavement area (SF) — lime-treated
             </span>
             <input
@@ -447,12 +409,12 @@ export function TakeoffFactsFields({
                   ? String(values.pavementAreaSf)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 150000"
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Pavement SF per trip
             </span>
             <input
@@ -461,14 +423,14 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(pavementSfDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               typical 25,000–30,000 (default mid 27,500)
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Pavement subgrade (LF) — not lime-treated
             </span>
             <input
@@ -481,12 +443,12 @@ export function TakeoffFactsFields({
                   ? String(values.pavementSubgradeLf)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 2400"
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Pavement LF per trip
             </span>
             <input
@@ -495,35 +457,34 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(pavementLfDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               typical 200–400 (default mid 300)
             </span>
           </label>
         </div>
 
         <label className="mt-3 block">
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-umber-soft">
             Pavement notes (optional)
           </span>
           <input
             name="pavementNotes"
             type="text"
             defaultValue={values?.pavementNotes ?? ""}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="input-soft mt-1.5 w-full text-sm"
             placeholder="e.g. 8 in lime-treated subgrade"
           />
         </label>
-      </div>
+      </details>
 
-      <div className="border-t border-slate-200 pt-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-          Sitework sidewalks
-        </p>
+      <details className="takeoff-section" open={compact}>
+        <summary>Sidewalks</summary>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Sidewalk length (LF)
             </span>
             <input
@@ -534,24 +495,24 @@ export function TakeoffFactsFields({
               defaultValue={
                 values?.sidewalkLf != null ? String(values.sidewalkLf) : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 500"
             />
           </label>
           <div className="flex items-end">
-            <label className="inline-flex items-center gap-2 pb-2 text-sm text-slate-700">
+            <label className="inline-flex items-center gap-2 pb-2 text-sm text-umber-soft">
               <input
                 type="checkbox"
                 name="sidewalksBunchedTogether"
                 value="true"
                 defaultChecked={sidewalksBunched}
-                className="rounded border-slate-300"
+                className="rounded accent-terracotta"
               />
               Sidewalks bunched together
             </label>
           </div>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Spread-out LF per trip
             </span>
             <input
@@ -560,14 +521,14 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(sidewalkSpreadDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 125 (when not bunched)
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Bunched LF per trip
             </span>
             <input
@@ -576,22 +537,21 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(sidewalkBunchedDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 150 (when bunched)
             </span>
           </label>
         </div>
-      </div>
+      </details>
 
-      <div className="border-t border-slate-200 pt-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-          Utility trench backfill
-        </p>
+      <details className="takeoff-section" open={compact}>
+        <summary>Utility trenches</summary>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Utility trench length (LF)
             </span>
             <input
@@ -604,15 +564,15 @@ export function TakeoffFactsFields({
                   ? String(values.utilityTrenchLf)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 800"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               storm / sewer / water trench
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Utility trench LF per trip
             </span>
             <input
@@ -621,20 +581,19 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(utilityTrenchDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               typical 150–175 (default mid 162.5)
             </span>
           </label>
         </div>
-      </div>
+      </details>
 
-      <div className="border-t border-slate-200 pt-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-          CIP Deep Foundations (Drilled Straight Shaft Piers)
-        </p>
-        <p className="mb-3 text-xs text-slate-500">
+      <details className="takeoff-section" open={compact}>
+        <summary>Deep foundations (piers)</summary>
+
+        <p className="mb-3 text-xs text-umber-faint">
           If a construction schedule is provided, enter schedule trips — that
           count overrides pier-count rules. Otherwise trips = ceil(pier count /
           piers per trip) by pier type: straight-shaft default{" "}
@@ -644,7 +603,7 @@ export function TakeoffFactsFields({
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Schedule trips (optional)
             </span>
             <input
@@ -658,15 +617,15 @@ export function TakeoffFactsFields({
                   ? String(values.foundationScheduleTrips)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 6 — overrides pier rules when set"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               Leave blank / 0 to use pier-count rules
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Pier count
             </span>
             <input
@@ -679,18 +638,18 @@ export function TakeoffFactsFields({
                   ? String(values.pierCount)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 36"
             />
           </label>
           <label className="block sm:col-span-2">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Pier type
             </span>
             <select
               name="pierType"
               defaultValue={pierType}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft !rounded-2xl mt-1.5 w-full text-sm"
             >
               <option value="straight_shaft">
                 Straight-shaft (1 trip / ~9–12 piers)
@@ -702,7 +661,7 @@ export function TakeoffFactsFields({
             </select>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Straight-shaft piers per trip
             </span>
             <input
@@ -711,14 +670,14 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(piersStraightDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               typical 9–12 (default mid 10.5)
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Cased piers per trip
             </span>
             <input
@@ -727,14 +686,14 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(piersCasedDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               typical 4–6 (default 5)
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Belled / underreamed piers per trip
             </span>
             <input
@@ -743,15 +702,15 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(piersBelledDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               typical 5–9 (default 7)
             </span>
           </label>
         </div>
         {showFoundation && (
-          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          <div className="mt-3 hint-banner px-4 py-3 text-sm">
             {foundationSuggestion.source === "schedule" ? (
               <p>
                 Schedule:{" "}
@@ -768,13 +727,12 @@ export function TakeoffFactsFields({
             )}
           </div>
         )}
-      </div>
+      </details>
 
-      <div className="border-t border-slate-200 pt-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-          Concrete Testing &amp; Reinforcing Steel Observations
-        </p>
-        <p className="mb-3 text-xs text-slate-500">
+      <details className="takeoff-section" open={compact}>
+        <summary>Concrete & rebar</summary>
+
+        <p className="mb-3 text-xs text-umber-faint">
           Rule A — Grade beams/pier caps: max(
           {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS}, ceil(yd³ / divisor)), default{" "}
           <strong>{DEFAULT_YD3_PER_TRIP_GRADE_BEAMS}</strong> (typical 100–175).
@@ -788,7 +746,7 @@ export function TakeoffFactsFields({
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Grade beams / pier caps (yd³)
             </span>
             <input
@@ -802,12 +760,12 @@ export function TakeoffFactsFields({
                   ? String(values.concreteYd3GradeBeamsPierCaps)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 50"
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               yd³ per trip (grade beams / pier caps)
             </span>
             <input
@@ -816,14 +774,14 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(yd3GradeBeamsDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               typical 100–175 (default mid 137.5)
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Building slab (yd³)
             </span>
             <input
@@ -837,12 +795,12 @@ export function TakeoffFactsFields({
                   ? String(values.concreteYd3BuildingSlab)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 200"
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               yd³ per trip (building slab)
             </span>
             <input
@@ -851,14 +809,14 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(yd3BuildingSlabDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 300 (1 trip / 300 yd³ or more; min 2 if less)
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Private pavement (yd³)
             </span>
             <input
@@ -872,12 +830,12 @@ export function TakeoffFactsFields({
                   ? String(values.concreteYd3PrivatePavement)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 400"
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               yd³ per trip (private pavement)
             </span>
             <input
@@ -886,14 +844,14 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(yd3PrivatePavementDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 500 (1 trip / 500 yd³ or less; ceil only)
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Public pavement (yd³)
             </span>
             <input
@@ -907,12 +865,12 @@ export function TakeoffFactsFields({
                   ? String(values.concreteYd3PublicPavement)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 800"
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               yd³ per trip (public pavement)
             </span>
             <input
@@ -921,15 +879,15 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(yd3PublicPavementDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 900 (1 trip / 900 yd³ or less; ceil only)
             </span>
           </label>
         </div>
         {showConcrete && (
-          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          <div className="mt-3 hint-banner px-4 py-3 text-sm">
             {showGradeBeams && (
               <p>
                 Grade beams / pier caps: max(
@@ -999,14 +957,13 @@ export function TakeoffFactsFields({
             </p>
           </div>
         )}
-      </div>
+      </details>
 
 
-      <div className="border-t border-slate-200 pt-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-          Masonry Testing &amp; Observations
-        </p>
-        <p className="mb-3 text-xs text-slate-500">
+      <details className="takeoff-section" open={compact}>
+        <summary>Masonry</summary>
+
+        <p className="mb-3 text-xs text-umber-faint">
           Rule A — Load-bearing CMU: ceil(SF / divisor), default{" "}
           <strong>{DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING.toLocaleString()}</strong>{" "}
           SF/trip. Rule B — Elevator shaft CMU: buildings with elevator ×
@@ -1016,7 +973,7 @@ export function TakeoffFactsFields({
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Load-bearing CMU wall (SF)
             </span>
             <input
@@ -1030,12 +987,12 @@ export function TakeoffFactsFields({
                   ? String(values.masonryLoadBearingCmuSf)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 12000"
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               SF per trip (load-bearing CMU)
             </span>
             <input
@@ -1044,14 +1001,14 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(masonryLoadBearingDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 5,000 (1 trip / 5,000 SF or less)
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Buildings with elevator
             </span>
             <input
@@ -1065,15 +1022,15 @@ export function TakeoffFactsFields({
                   ? String(values.masonryElevatorBuildingCount)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 2"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               multifamily buildings that have an elevator
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Elevator shaft CMU height (ft per building)
             </span>
             <input
@@ -1087,12 +1044,12 @@ export function TakeoffFactsFields({
                   ? String(values.masonryElevatorShaftHeightFt)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 48"
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               ft per trip (elevator shaft)
             </span>
             <input
@@ -1101,14 +1058,14 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(masonryElevatorShaftDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 16 (1 trip / 16 ft height per building)
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               CMU enclosures (dumpster / equipment)
             </span>
             <input
@@ -1122,16 +1079,16 @@ export function TakeoffFactsFields({
                   ? String(values.masonryCmuEnclosureCount)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 3"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               1 trip each
             </span>
           </label>
         </div>
         {showMasonry && (
-          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          <div className="mt-3 hint-banner px-4 py-3 text-sm">
             {showLoadBearingCmu && (
               <p>
                 Load-bearing CMU: ceil(
@@ -1179,32 +1136,31 @@ export function TakeoffFactsFields({
             </p>
           </div>
         )}
-      </div>
+      </details>
 
-      <div className="border-t border-slate-200 pt-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-          High-Strength Grout Testing &amp; Observations
-        </p>
-        <p className="mb-3 text-xs text-slate-500">
+      <details className="takeoff-section" open={compact}>
+        <summary>High-strength grout</summary>
+
+        <p className="mb-3 text-xs text-umber-faint">
           One (1) trip for every{" "}
           <strong>{DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES.toLocaleString()}</strong>{" "}
           ft² of building pad, <em>only if</em> grout baseplates are present in
           special inspection requirements. Building pad SF often equals building
           area — if pad is blank, building area is used.
         </p>
-        <label className="mb-3 inline-flex items-center gap-2 text-sm text-slate-700">
+        <label className="mb-3 inline-flex items-center gap-2 text-sm text-umber-soft">
           <input
             type="checkbox"
             name="groutBaseplatesInSpecialInspection"
             value="true"
             defaultChecked={groutBaseplates}
-            className="rounded border-slate-300"
+            className="rounded accent-terracotta"
           />
           Grout baseplates in special inspection requirements
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Building pad (SF)
             </span>
             <input
@@ -1217,15 +1173,15 @@ export function TakeoffFactsFields({
                   ? String(values.buildingPadSf)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 100000 — blank uses building area"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               often equals building area; falls back to building area when blank
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               ft² per trip (grout baseplates)
             </span>
             <input
@@ -1234,15 +1190,15 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(groutFt2Divisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 17,000
             </span>
           </label>
         </div>
         {showGrout && (
-          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          <div className="mt-3 hint-banner px-4 py-3 text-sm">
             <p>
               Grout baseplates: ceil(
               {groutSuggestion.padSf.toLocaleString()} /{" "}
@@ -1254,13 +1210,12 @@ export function TakeoffFactsFields({
             </p>
           </div>
         )}
-      </div>
+      </details>
 
-      <div className="border-t border-slate-200 pt-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-          Structural Steel Inspections
-        </p>
-        <p className="mb-3 text-xs text-slate-500">
+      <details className="takeoff-section" open={compact}>
+        <summary>Structural steel</summary>
+
+        <p className="mb-3 text-xs text-umber-faint">
           Per level: one (1) trip for every{" "}
           <strong>
             {DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP.toLocaleString()}
@@ -1275,7 +1230,7 @@ export function TakeoffFactsFields({
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Structural steel building (SF)
             </span>
             <input
@@ -1289,15 +1244,15 @@ export function TakeoffFactsFields({
                   ? String(values.structuralSteelBuildingSf)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 100000 — blank uses building area"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               typically floor plate SF; falls back to building area when blank
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Structure levels
             </span>
             <input
@@ -1306,14 +1261,14 @@ export function TakeoffFactsFields({
               step="1"
               min="1"
               defaultValue={String(structureLevelCount)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 1 (min 1); multiplies per-level trips
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               SF per trip (structural steel)
             </span>
             <input
@@ -1322,14 +1277,14 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(structuralSteelSfDivisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 20,000
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Final inspection trips (per level)
             </span>
             <input
@@ -1338,15 +1293,15 @@ export function TakeoffFactsFields({
               step="1"
               min="0"
               defaultValue={String(structuralSteelFinalTrips)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 1 (added only when area &gt; 0)
             </span>
           </label>
         </div>
         {showSteel && (
-          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          <div className="mt-3 hint-banner px-4 py-3 text-sm">
             <p>
               {steelSuggestion.structureLevelCount} levels × (ceil(
               {steelSuggestion.sf.toLocaleString()} /{" "}
@@ -1359,19 +1314,17 @@ export function TakeoffFactsFields({
                 ? " (using building area)"
                 : ""}
             </p>
-            <p className="mt-1 text-xs text-amber-900/80">
+            <p className="mt-1 text-xs text-hint/80">
               Applied only to Structural Steel Inspections when that parent is in
               scope.
             </p>
           </div>
         )}
-      </div>
+      </details>
 
-      <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-          Floor Flatness Testing &amp; Observations
-        </p>
-        <p className="mb-3 text-xs text-slate-500">
+      <details className="takeoff-section" open={compact}>
+        <summary>Floor flatness</summary>
+        <p className="mb-3 text-xs text-umber-faint">
           One (1) trip per building slab-on-grade pour{" "}
           <em>or</em> one (1) trip per{" "}
           <strong>
@@ -1384,7 +1337,7 @@ export function TakeoffFactsFields({
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Slab-on-grade pour count
             </span>
             <input
@@ -1398,15 +1351,15 @@ export function TakeoffFactsFields({
                   ? String(values.slabOnGradePourCount)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 2"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               1 trip per pour
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Floor flatness / building slab (SF)
             </span>
             <input
@@ -1419,15 +1372,15 @@ export function TakeoffFactsFields({
                   ? String(values.floorFlatnessSf)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="blank uses building area"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               falls back to building area when blank
             </span>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               ft² per trip (floor flatness)
             </span>
             <input
@@ -1436,15 +1389,15 @@ export function TakeoffFactsFields({
               step="any"
               min="1"
               defaultValue={String(floorFlatnessFt2Divisor)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               default 30,000
             </span>
           </label>
         </div>
         {showFloorFlatness && (
-          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          <div className="mt-3 hint-banner px-4 py-3 text-sm">
             <p>
               pours: {floorFlatnessSuggestion.pourTrips} | SF rule:{" "}
               {floorFlatnessSuggestion.sfTrips} → using max{" "}
@@ -1455,19 +1408,17 @@ export function TakeoffFactsFields({
                   ? ` (${floorFlatnessSuggestion.sf.toLocaleString()} / ${floorFlatnessSuggestion.ft2PerTrip.toLocaleString()})`
                   : ""}
             </p>
-            <p className="mt-1 text-xs text-amber-900/80">
+            <p className="mt-1 text-xs text-hint/80">
               Applied only to Floor Flatness Testing &amp; Observations when that
               parent is in scope.
             </p>
           </div>
         )}
-      </div>
+      </details>
 
-      <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-          Post-Tension Testing &amp; Observations
-        </p>
-        <p className="mb-3 text-xs text-slate-500">
+      <details className="takeoff-section" open={compact}>
+        <summary>Post-tension</summary>
+        <p className="mb-3 text-xs text-umber-faint">
           Total trips = <strong>2 × pour count</strong> when pours &gt; 0
           (covers one pre-pour and one tendon stressing visit per pour). Applied
           only when this parent is in scope. Dedicated post-tension pour count
@@ -1475,7 +1426,7 @@ export function TakeoffFactsFields({
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-umber-soft">
               Post-tension slab pour count
             </span>
             <input
@@ -1489,16 +1440,16 @@ export function TakeoffFactsFields({
                   ? String(values.postTensionSlabPourCount)
                   : ""
               }
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input-soft mt-1.5 w-full text-sm"
               placeholder="e.g. 3"
             />
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-umber-faint">
               often same as slab pours; blank uses slab-on-grade pour count
             </span>
           </label>
         </div>
         {showPostTension && (
-          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          <div className="mt-3 hint-banner px-4 py-3 text-sm">
             <p>
               Suggested: <strong>{postTensionSuggestion.trips}</strong> trips (2
               × {postTensionSuggestion.pourCount} pours)
@@ -1506,17 +1457,17 @@ export function TakeoffFactsFields({
                 ? " (from slab-on-grade pours)"
                 : ""}
             </p>
-            <p className="mt-1 text-xs text-amber-900/80">
+            <p className="mt-1 text-xs text-hint/80">
               Applied only to Post-Tension Testing &amp; Observations when that
               parent is in scope. Apply suggestions sets one hours line (hours ×
               trips) plus Vehicle — not separate pre-pour / stressing rows.
             </p>
           </div>
         )}
-      </div>
+      </details>
 
       {(showBuilding || showPavement || showSidewalk || showUtilityTrench) && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+        <div className="hint-banner px-4 py-3 text-sm">
           {showBuilding && (
             <p>
               Building: ceil({Number(buildingSf).toLocaleString()} /{" "}

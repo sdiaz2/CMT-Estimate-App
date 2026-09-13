@@ -29,46 +29,46 @@ export default async function LabPage({
   return (
     <div>
       <StepNav projectId={id} current="lab" />
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{project.name}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-600">
-            Lab samples/tests are suggested from field trips and drivers
-            (compressive strength, Atterberg, Proctor, sieve, Wash #200, asphalt
-            bulk density). Apply suggestions, then edit freely.
+          <h1 className="text-3xl font-semibold tracking-tight text-umber">
+            {project.name}
+          </h1>
+          <p className="page-lead mt-2">
+            Lab tests are suggested from your field trips. Review the list, then
+            continue to the worksheet when it looks right.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5">
           <form action={applyLabSuggestions.bind(null, id)}>
             <button
               type="submit"
-              className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+              className={labParent ? "btn-secondary text-sm" : "btn-primary text-sm"}
             >
-              {labParent ? "Re-apply lab suggestions" : "Suggest lab & add Laboratory Testing"}
+              {labParent ? "Refresh lab suggestions" : "Suggest lab tests"}
             </button>
           </form>
-          <Link
-            href={`/projects/${id}/worksheet`}
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white"
-          >
-            Next: Worksheet →
-          </Link>
         </div>
       </div>
 
       {!labParent ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-600">
-          No Laboratory Testing parent yet. Click{" "}
-          <strong>Suggest lab</strong> to create it from field drivers, or add it
-          on the{" "}
-          <Link href={`/projects/${id}/scope`} className="text-blue-600 hover:underline">
-            Scope
-          </Link>{" "}
-          step.
+        <div className="empty-state">
+          <p className="text-lg font-medium text-umber">No lab lines yet</p>
+          <p className="mt-2 text-umber-muted">
+            Press <strong className="text-umber">Suggest lab tests</strong> to
+            build lines from your field trips, or add Laboratory Testing on{" "}
+            <Link
+              href={`/projects/${id}/scope`}
+              className="font-medium text-terracotta hover:text-terracotta-hover"
+            >
+              Scope
+            </Link>
+            .
+          </p>
         </div>
       ) : (
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-slate-900">
+        <section className="card-soft p-6">
+          <h2 className="mb-5 text-lg font-semibold text-umber">
             {labParent.catalog.name}
           </h2>
           <LineItemsEditor

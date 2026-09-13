@@ -60,25 +60,17 @@ export function WorksheetActions({
   }
 
   return (
-    <div className="no-print mb-4 flex flex-wrap gap-2">
-      <button
-        type="button"
-        onClick={download}
-        className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
-      >
+    <div className="no-print mb-5 flex flex-wrap gap-2.5">
+      <button type="button" onClick={download} className="btn-primary text-sm">
         Export CSV
       </button>
-      <button
-        type="button"
-        onClick={copy}
-        className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-      >
+      <button type="button" onClick={copy} className="btn-secondary text-sm">
         Copy table
       </button>
       <button
         type="button"
         onClick={() => window.print()}
-        className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+        className="btn-secondary text-sm"
       >
         Print
       </button>

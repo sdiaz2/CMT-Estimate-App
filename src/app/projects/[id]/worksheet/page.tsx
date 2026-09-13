@@ -38,16 +38,17 @@ export default async function WorksheetPage({
   return (
     <div>
       <StepNav projectId={id} current="worksheet" />
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">{project.name}</h1>
-        <p className="mt-1 max-w-3xl text-sm text-slate-600">
-          Clean worksheet for re-key into Pricing Tool. Columns map as{" "}
-          <strong>Parent → Description | Quantity | Units | Trips</strong>.
-          Optional display rates are omitted here so you can enter Pricing Tool
-          rates during re-key. Export CSV, copy TSV, or print.
+      <div className="mb-8">
+        <h1 className="text-3xl font-semibold tracking-tight text-umber">
+          {project.name}
+        </h1>
+        <p className="page-lead mt-2">
+          This is your clean list for Pricing Tool: parent, description,
+          quantity, units, and trips. Export, copy, or print — then re-key rates
+          in Pricing Tool.
         </p>
         {(project.location || project.docsReceived) && (
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-umber-faint">
             {project.location && <>Location: {project.location}. </>}
             {project.docsReceived && <>Docs: {project.docsReceived}</>}
           </p>
@@ -56,39 +57,49 @@ export default async function WorksheetPage({
 
       <WorksheetActions projectName={project.name} rows={rows} />
 
-      <div className="print-break overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
+      <div className="table-wrap-soft print-break">
+        <table className="table-soft min-w-full text-left text-sm">
+          <thead className="text-xs uppercase tracking-wide text-umber-muted">
             <tr>
-              <th className="px-4 py-3">Parent</th>
-              <th className="px-4 py-3">Description</th>
-              <th className="px-4 py-3 text-right">Quantity</th>
-              <th className="px-4 py-3">Units</th>
-              <th className="px-4 py-3 text-right">Trips</th>
+              <th className="px-5 py-4">Parent</th>
+              <th className="px-5 py-4">Description</th>
+              <th className="px-5 py-4 text-right">Quantity</th>
+              <th className="px-5 py-4">Units</th>
+              <th className="px-5 py-4 text-right">Trips</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                  No line items yet. Apply suggestions on Trips/Hours and Lab.
+                <td colSpan={5} className="px-5 py-12 text-center">
+                  <p className="text-base font-medium text-umber">
+                    Nothing on the worksheet yet
+                  </p>
+                  <p className="mt-2 text-sm text-umber-muted">
+                    Go back to Trips &amp; hours (and Lab) and apply suggestions
+                    first.
+                  </p>
                 </td>
               </tr>
             ) : (
               rows.map((r, i) => (
                 <tr
                   key={`${r.parent}-${r.description}-${i}`}
-                  className="border-t border-slate-100"
+                  className={i % 2 === 1 ? "bg-sand/30" : undefined}
                 >
-                  <td className="px-4 py-2 align-top text-slate-600">{r.parent}</td>
-                  <td className="px-4 py-2 align-top font-medium text-slate-900">
+                  <td className="px-5 py-3 align-top text-umber-muted">
+                    {r.parent}
+                  </td>
+                  <td className="px-5 py-3 align-top font-medium text-umber">
                     {r.description}
                   </td>
-                  <td className="px-4 py-2 align-top text-right tabular-nums">
+                  <td className="px-5 py-3 align-top text-right tabular-nums text-umber">
                     {r.quantity}
                   </td>
-                  <td className="px-4 py-2 align-top">{r.units}</td>
-                  <td className="px-4 py-2 align-top text-right tabular-nums text-slate-600">
+                  <td className="px-5 py-3 align-top text-umber-muted">
+                    {r.units}
+                  </td>
+                  <td className="px-5 py-3 align-top text-right tabular-nums text-umber-muted">
                     {r.trips ?? "—"}
                   </td>
                 </tr>
@@ -99,7 +110,7 @@ export default async function WorksheetPage({
       </div>
 
       {project.parents.some((p) => p.catalog.name.includes("8%")) && (
-        <p className="mt-4 text-xs text-amber-800">
+        <p className="mt-5 text-xs text-hint">
           Admin support note (8%): enter approximately 8% of technical fees as a
           separate line when re-keying into Pricing Tool — quantities here are
           not locked fees.

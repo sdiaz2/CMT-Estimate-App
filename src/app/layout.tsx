@@ -13,23 +13,26 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen antialiased">
-        <header className="no-print border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-            <a href="/" className="text-lg font-semibold tracking-tight text-slate-900">
+      <body className="min-h-screen antialiased text-umber">
+        <header className="no-print bg-paper/80 backdrop-blur-md">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+            <a
+              href="/"
+              className="text-xl font-semibold tracking-tight text-umber"
+            >
               CMT Estimate
             </a>
-            <nav className="flex items-center gap-4 text-sm text-slate-600">
-              <a href="/" className="hover:text-slate-900">
+            <nav className="flex items-center gap-4 text-sm text-umber-muted">
+              <a href="/" className="hover:text-umber transition-colors">
                 Projects
               </a>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+              <span className="rounded-full bg-sage-soft px-3 py-1 text-xs font-medium text-olive">
                 v1 MVP
               </span>
             </nav>
           </div>
         </header>
-        <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+        <main className="mx-auto max-w-7xl px-6 py-10">{children}</main>
       </body>
     </html>
   );

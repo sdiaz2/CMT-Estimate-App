@@ -164,36 +164,24 @@ export default async function FieldPage({
   return (
     <div>
       <StepNav projectId={id} current="field" />
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{project.name}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-600">
-            Edit drivers (trips/hours/OT/vehicle) then apply rule-based
-            suggestions. Every quantity stays fully editable — suggestions never
-            lock numbers.
+          <h1 className="text-3xl font-semibold tracking-tight text-umber">{project.name}</h1>
+          <p className="page-lead mt-2">
+            Review trips and hours for each parent. Apply suggestions, then edit
+            anything that does not match the job — numbers never lock.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <form action={applyAllFieldSuggestions.bind(null, id)}>
-            <button
-              type="submit"
-              className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
-            >
-              Apply suggestions (all)
-            </button>
-          </form>
-          <Link
-            href={`/projects/${id}/lab`}
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white"
-          >
-            Next: Lab →
-          </Link>
-        </div>
+        <form action={applyAllFieldSuggestions.bind(null, id)}>
+          <button type="submit" className="btn-primary text-sm">
+            Apply all suggestions
+          </button>
+        </form>
       </div>
 
       <MissCheckBanner prompts={prompts} />
 
-      <section className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="mb-8 card-soft p-6">
         <form action={updateProjectTakeoff.bind(null, id)} className="space-y-4">
           <TakeoffFactsFields
             compact
@@ -259,18 +247,18 @@ export default async function FieldPage({
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"
-              className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+              className="btn-secondary px-3 py-1.5 text-xs"
             >
               Save takeoff facts
             </button>
             {takeoffApplies && (
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-umber-muted">
                 Earthwork preview: <strong>{suggestion.total} trips</strong>
                 {labels.combined ? ` — ${labels.combined}` : ""}
               </p>
             )}
             {foundationTakeoffApplies && (
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-umber-muted">
                 Foundation preview:{" "}
                 <strong>{foundationSuggestion.trips} trips</strong>
                 {foundationSuggestion.source === "schedule"
@@ -279,7 +267,7 @@ export default async function FieldPage({
               </p>
             )}
             {concreteTakeoffApplies && (
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-umber-muted">
                 Concrete preview:{" "}
                 <strong>{concreteSuggestion.total} trips</strong>
                 {[
@@ -318,7 +306,7 @@ export default async function FieldPage({
               </p>
             )}
             {groutTakeoffApplies && (
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-umber-muted">
                 Grout preview:{" "}
                 <strong>{groutSuggestion.trips} trips</strong>
                 {groutSuggestion.padSfSource === "buildingAreaSf"
@@ -327,7 +315,7 @@ export default async function FieldPage({
               </p>
             )}
             {steelTakeoffApplies && (
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-umber-muted">
                 Structural Steel Inspections preview:{" "}
                 <strong>{steelSuggestion.trips} trips</strong> (
                 {steelSuggestion.structureLevelCount} levels ×{" "}
@@ -338,7 +326,7 @@ export default async function FieldPage({
               </p>
             )}
             {floorFlatnessTakeoffApplies && (
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-umber-muted">
                 Floor Flatness preview:{" "}
                 <strong>{floorFlatnessSuggestion.trips} trips</strong> (pours:{" "}
                 {floorFlatnessSuggestion.pourTrips} | SF rule:{" "}
@@ -349,7 +337,7 @@ export default async function FieldPage({
               </p>
             )}
             {postTensionTakeoffApplies && (
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-umber-muted">
                 Post-Tension preview:{" "}
                 <strong>{postTensionSuggestion.trips} trips</strong> (2 ×{" "}
                 {postTensionSuggestion.pourCount} pours)
@@ -363,10 +351,17 @@ export default async function FieldPage({
       </section>
 
       {fieldParents.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-600">
-          No field/admin parents selected.{" "}
-          <Link href={`/projects/${id}/scope`} className="text-blue-600 hover:underline">
-            Choose scope
+        <div className="empty-state">
+          <p className="text-lg font-medium text-umber">No work selected yet</p>
+          <p className="mt-2 text-umber-muted">
+            Pick the testing parents on Scope first, then come back to set trips
+            and hours.
+          </p>
+          <Link
+            href={`/projects/${id}/scope`}
+            className="btn-primary mt-6 text-sm"
+          >
+            Go to scope
           </Link>
         </div>
       ) : (
@@ -426,16 +421,16 @@ export default async function FieldPage({
             return (
               <section
                 key={parent.id}
-                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                className="card-soft p-6"
               >
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-lg font-semibold text-slate-900">
+                  <h2 className="text-lg font-semibold text-umber">
                     {parent.catalog.name}
                   </h2>
                   <form action={applyFieldSuggestions.bind(null, id, parent.id)}>
                     <button
                       type="submit"
-                      className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-800 ring-1 ring-slate-200 hover:bg-slate-200"
+                      className="btn-secondary px-3 py-1.5 text-xs"
                     >
                       Apply suggestions
                     </button>
@@ -445,9 +440,9 @@ export default async function FieldPage({
                 {isEarthwork && (
                   <div className="mb-4 space-y-2">
                     {(buildingSf > 0 || !takeoffApplies) && (
-                      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                      <div className="hint-banner px-4 py-3 text-sm">
                         <p className="font-medium">{labels.building}</p>
-                        <p className="mt-1 text-xs text-amber-900/80">
+                        <p className="mt-1 text-xs text-hint/80">
                           Moisture-conditioned subgrade + flexible base cap
                           {ruleAppliesBuilding
                             ? " (flags on for this project)."
@@ -458,9 +453,9 @@ export default async function FieldPage({
                     {(limeTreated
                       ? pavementSf > 0 || !takeoffApplies
                       : pavementLf > 0 || !takeoffApplies) && (
-                      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                      <div className="hint-banner px-4 py-3 text-sm">
                         <p className="font-medium">{labels.pavement}</p>
-                        <p className="mt-1 text-xs text-amber-900/80">
+                        <p className="mt-1 text-xs text-hint/80">
                           {limeTreated
                             ? "Lime-treated pavement uses the SF rule only (LF rule not applied)."
                             : "No lime treatment: pavement subgrade uses the LF rule only (SF rule not applied)."}
@@ -468,9 +463,9 @@ export default async function FieldPage({
                       </div>
                     )}
                     {(sidewalkLf > 0 || !takeoffApplies) && (
-                      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                      <div className="hint-banner px-4 py-3 text-sm">
                         <p className="font-medium">{labels.sidewalk}</p>
-                        <p className="mt-1 text-xs text-amber-900/80">
+                        <p className="mt-1 text-xs text-hint/80">
                           Spread-out default{" "}
                           {DEFAULT_SIDEWALK_SPREAD_LF_PER_TRIP} LF/trip; bunched{" "}
                           {DEFAULT_SIDEWALK_BUNCHED_LF_PER_TRIP} LF/trip
@@ -479,9 +474,9 @@ export default async function FieldPage({
                       </div>
                     )}
                     {(utilityTrenchLf > 0 || !takeoffApplies) && (
-                      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                      <div className="hint-banner px-4 py-3 text-sm">
                         <p className="font-medium">{labels.utilityTrench}</p>
-                        <p className="mt-1 text-xs text-amber-900/80">
+                        <p className="mt-1 text-xs text-hint/80">
                           Storm/sewer/water trench backfill: default{" "}
                           {DEFAULT_UTILITY_TRENCH_LF_PER_TRIP} LF/trip (typical
                           150–175, editable).
@@ -489,9 +484,9 @@ export default async function FieldPage({
                       </div>
                     )}
                     {labels.combined && (
-                      <div className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-950">
+                      <div className="hint-banner px-4 py-3 text-sm font-medium">
                         {labels.combined}
-                        <span className="mt-1 block text-xs font-normal text-amber-900/80">
+                        <span className="mt-1 block text-xs font-normal text-hint/80">
                           Apply suggestions uses the total for Trips and cascades
                           hours / gauge / vehicle. Numbers stay editable.
                         </span>
@@ -501,9 +496,9 @@ export default async function FieldPage({
                 )}
 
                 {isFoundation && (
-                  <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  <div className="mb-4 hint-banner px-4 py-3 text-sm">
                     <p className="font-medium">{foundationLabel}</p>
-                    <p className="mt-1 text-xs text-amber-900/80">
+                    <p className="mt-1 text-xs text-hint/80">
                       Schedule trips override pier-count rules when set (&gt;0).
                       Straight-shaft default {DEFAULT_PIERS_PER_TRIP_STRAIGHT}{" "}
                       piers/trip (9–12); cased {DEFAULT_PIERS_PER_TRIP_CASED}{" "}
@@ -516,43 +511,43 @@ export default async function FieldPage({
 
                 {isConcrete && (
                   <div className="mb-4 space-y-2">
-                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <div className="hint-banner px-4 py-3 text-sm">
                       <p className="font-medium">
                         {concreteLabels.gradeBeamsPierCaps}
                       </p>
-                      <p className="mt-1 text-xs text-amber-900/80">
+                      <p className="mt-1 text-xs text-hint/80">
                         Rule A — Grade beams and pier caps: max(
                         {MIN_TRIPS_GRADE_BEAMS_PIER_CAPS}, ceil(yd³ / divisor)).
                         Default {DEFAULT_YD3_PER_TRIP_GRADE_BEAMS} yd³/trip
                         (typical 100–175).
                       </p>
                     </div>
-                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <div className="hint-banner px-4 py-3 text-sm">
                       <p className="font-medium">
                         {concreteLabels.buildingSlab}
                       </p>
-                      <p className="mt-1 text-xs text-amber-900/80">
+                      <p className="mt-1 text-xs text-hint/80">
                         Rule B — Building slab: 1 trip /{" "}
                         {DEFAULT_YD3_PER_TRIP_BUILDING_SLAB} yd³ or more; if
                         yd³ &gt; 0 but ceil &lt; 2, minimum{" "}
                         {MIN_TRIPS_BUILDING_SLAB} trips.
                       </p>
                     </div>
-                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <div className="hint-banner px-4 py-3 text-sm">
                       <p className="font-medium">
                         {concreteLabels.privatePavement}
                       </p>
-                      <p className="mt-1 text-xs text-amber-900/80">
+                      <p className="mt-1 text-xs text-hint/80">
                         Rule C — Private pavement: 1 trip /{" "}
                         {DEFAULT_YD3_PER_TRIP_PRIVATE_PAVEMENT} yd³ or less;
                         trips = ceil(yd³ / divisor) only (no min-2).
                       </p>
                     </div>
-                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <div className="hint-banner px-4 py-3 text-sm">
                       <p className="font-medium">
                         {concreteLabels.publicPavement}
                       </p>
-                      <p className="mt-1 text-xs text-amber-900/80">
+                      <p className="mt-1 text-xs text-hint/80">
                         Rule C — Public pavement: 1 trip /{" "}
                         {DEFAULT_YD3_PER_TRIP_PUBLIC_PAVEMENT} yd³ or less;
                         trips = ceil(yd³ / divisor) only (no min-2). Apply
@@ -561,7 +556,7 @@ export default async function FieldPage({
                       </p>
                     </div>
                     {concreteLabels.combined && (
-                      <div className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-950">
+                      <div className="hint-banner px-4 py-3 text-sm font-medium">
                         {concreteLabels.combined}
                       </div>
                     )}
@@ -570,37 +565,37 @@ export default async function FieldPage({
 
                 {isMasonry && (
                   <div className="mb-4 space-y-2">
-                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <div className="hint-banner px-4 py-3 text-sm">
                       <p className="font-medium">
                         {masonryLabels.loadBearingCmu}
                       </p>
-                      <p className="mt-1 text-xs text-amber-900/80">
+                      <p className="mt-1 text-xs text-hint/80">
                         Rule A — Load-bearing CMU wall: 1 trip /{" "}
                         {DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING.toLocaleString()}{" "}
                         SF or less; trips = ceil(SF / divisor).
                       </p>
                     </div>
-                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <div className="hint-banner px-4 py-3 text-sm">
                       <p className="font-medium">
                         {masonryLabels.elevatorShaft}
                       </p>
-                      <p className="mt-1 text-xs text-amber-900/80">
+                      <p className="mt-1 text-xs text-hint/80">
                         Rule B — Multifamily elevator shaft CMU: buildings with
                         elevator × ceil(shaft height ft /{" "}
                         {DEFAULT_MASONRY_FT_PER_TRIP_ELEVATOR_SHAFT}) (height is
                         per building).
                       </p>
                     </div>
-                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <div className="hint-banner px-4 py-3 text-sm">
                       <p className="font-medium">{masonryLabels.enclosure}</p>
-                      <p className="mt-1 text-xs text-amber-900/80">
+                      <p className="mt-1 text-xs text-hint/80">
                         Rule C — Dumpster and/or equipment CMU enclosures: 1 trip
                         each. Apply suggestions sets Trips and cascades Masonry
                         Testing / Vehicle. Numbers stay editable.
                       </p>
                     </div>
                     {masonryLabels.combined && (
-                      <div className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-950">
+                      <div className="hint-banner px-4 py-3 text-sm font-medium">
                         {masonryLabels.combined}
                       </div>
                     )}
@@ -608,9 +603,9 @@ export default async function FieldPage({
                 )}
 
                 {isGrout && (
-                  <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  <div className="mb-4 hint-banner px-4 py-3 text-sm">
                     <p className="font-medium">{groutLabel}</p>
-                    <p className="mt-1 text-xs text-amber-900/80">
+                    <p className="mt-1 text-xs text-hint/80">
                       One (1) trip for every{" "}
                       {DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES.toLocaleString()}{" "}
                       ft² of building pad, only if grout baseplates are present
@@ -623,7 +618,7 @@ export default async function FieldPage({
                 )}
 
                 {isSteel && (
-                  <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  <div className="mb-4 hint-banner px-4 py-3 text-sm">
                     <p className="font-medium">{steelLabel}</p>
                     {steelTakeoffApplies && (
                       <p className="mt-1 text-sm">
@@ -632,7 +627,7 @@ export default async function FieldPage({
                         {steelSuggestion.finalTripsPerLevel} final)
                       </p>
                     )}
-                    <p className="mt-1 text-xs text-amber-900/80">
+                    <p className="mt-1 text-xs text-hint/80">
                       Per level: 1 trip /{" "}
                       {DEFAULT_STRUCTURAL_STEEL_SF_PER_TRIP.toLocaleString()}{" "}
                       ft² + {DEFAULT_STRUCTURAL_STEEL_FINAL_INSPECTION_TRIPS}{" "}
@@ -646,7 +641,7 @@ export default async function FieldPage({
                 )}
 
                 {isFloorFlatness && (
-                  <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  <div className="mb-4 hint-banner px-4 py-3 text-sm">
                     <p className="font-medium">{floorFlatnessLabel}</p>
                     {floorFlatnessTakeoffApplies && (
                       <p className="mt-1 text-sm">
@@ -655,7 +650,7 @@ export default async function FieldPage({
                         <strong>{floorFlatnessSuggestion.trips}</strong>
                       </p>
                     )}
-                    <p className="mt-1 text-xs text-amber-900/80">
+                    <p className="mt-1 text-xs text-hint/80">
                       One (1) trip per slab-on-grade pour or 1 trip /{" "}
                       {DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS.toLocaleString()}{" "}
                       ft² — use max of both. Floor flatness SF falls back to
@@ -666,7 +661,7 @@ export default async function FieldPage({
                 )}
 
                 {isPostTension && (
-                  <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  <div className="mb-4 hint-banner px-4 py-3 text-sm">
                     <p className="font-medium">{postTensionLabel}</p>
                     {postTensionTakeoffApplies && (
                       <p className="mt-1 text-sm">
@@ -675,7 +670,7 @@ export default async function FieldPage({
                         × {postTensionSuggestion.pourCount} pours)
                       </p>
                     )}
-                    <p className="mt-1 text-xs text-amber-900/80">
+                    <p className="mt-1 text-xs text-hint/80">
                       Trips = 2 × pours (one pre-pour + one tendon stressing
                       visit per pour). Dedicated pour count falls back to
                       slab-on-grade (often the same). Apply suggestions sets
@@ -691,7 +686,7 @@ export default async function FieldPage({
                   className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8"
                 >
                   {DRIVER_FIELDS.map((f) => (
-                    <label key={f.key} className="block text-xs text-slate-500">
+                    <label key={f.key} className="block text-xs text-umber-faint">
                       {f.label}
                       <input
                         name={f.key}
@@ -702,14 +697,14 @@ export default async function FieldPage({
                             ? String(displayDrivers[f.key])
                             : ""
                         }
-                        className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-900"
+                        className="input-soft mt-1 w-full !rounded-2xl px-3 py-1.5 text-sm"
                       />
                     </label>
                   ))}
                   <div className="col-span-2 flex items-end sm:col-span-4 lg:col-span-8">
                     <button
                       type="submit"
-                      className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+                      className="btn-secondary px-3 py-1.5 text-xs"
                     >
                       Save drivers
                     </button>
@@ -729,7 +724,7 @@ export default async function FieldPage({
       )}
 
       {hasEarthworkTesting && !takeoffApplies && (
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-umber-faint">
           Tip: enter building SF, pavement (lime SF or non-lime LF), sidewalk LF,
           and/or utility trench LF in Takeoff above. Defaults: building{" "}
           {DEFAULT_EARTHWORK_SF_PER_TRIP.toLocaleString()} SF/trip; lime pavement{" "}
@@ -742,7 +737,7 @@ export default async function FieldPage({
       )}
 
       {hasCipDeepFoundations && !foundationTakeoffApplies && (
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-umber-faint">
           Tip: for CIP Deep Foundations, enter schedule trips (overrides pier
           rules) or pier count + type. Defaults: straight-shaft{" "}
           {DEFAULT_PIERS_PER_TRIP_STRAIGHT} piers/trip; cased{" "}
@@ -751,7 +746,7 @@ export default async function FieldPage({
       )}
 
       {hasConcreteTesting && !concreteTakeoffApplies && (
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-umber-faint">
           Tip: for Concrete Testing &amp; Reinforcing Steel Observations, enter
           grade beams / pier caps yd³ (default{" "}
           {DEFAULT_YD3_PER_TRIP_GRADE_BEAMS}/trip), building slab yd³ (default{" "}
@@ -764,7 +759,7 @@ export default async function FieldPage({
       )}
 
       {hasMasonryTesting && !masonryTakeoffApplies && (
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-umber-faint">
           Tip: for Masonry Testing &amp; Observations, enter load-bearing CMU SF
           (default {DEFAULT_MASONRY_SF_PER_TRIP_LOAD_BEARING.toLocaleString()}{" "}
           SF/trip), multifamily elevator building count + shaft height ft/building
@@ -774,7 +769,7 @@ export default async function FieldPage({
       )}
 
       {hasGroutTesting && !groutTakeoffApplies && (
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-umber-faint">
           Tip: for High-Strength Grout Testing &amp; Observations, turn on
           &quot;grout baseplates in special inspection&quot; and enter building
           pad SF (or rely on building area). Default{" "}
@@ -783,7 +778,7 @@ export default async function FieldPage({
       )}
 
       {hasStructuralSteel && !steelTakeoffApplies && (
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-umber-faint">
           Tip: for Structural Steel Inspections, enter steel building SF (or rely
           on building area) and structure levels (default{" "}
           {DEFAULT_STRUCTURE_LEVEL_COUNT}). Per level:{" "}
@@ -794,7 +789,7 @@ export default async function FieldPage({
       )}
 
       {hasFloorFlatness && !floorFlatnessTakeoffApplies && (
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-umber-faint">
           Tip: for Floor Flatness Testing &amp; Observations, enter slab-on-grade
           pour count and/or floor flatness SF (falls back to building area).
           Suggested trips = max(pours, ceil(SF /{" "}
@@ -803,7 +798,7 @@ export default async function FieldPage({
       )}
 
       {hasPostTension && !postTensionTakeoffApplies && (
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-umber-faint">
           Tip: for Post-Tension Testing &amp; Observations, enter post-tension
           slab pour count (or rely on slab-on-grade pours). Suggested trips = 2 ×
           pours.

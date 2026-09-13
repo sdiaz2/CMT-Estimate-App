@@ -5,15 +5,15 @@ export function MissCheckBanner({
 }) {
   if (!prompts.length) return null;
   return (
-    <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4">
-      <h3 className="text-sm font-semibold text-amber-900">Scope miss-check</h3>
-      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-800">
+    <div className="hint-banner mb-8 p-5">
+      <h3 className="text-sm font-semibold text-hint">Possible missing scope</h3>
+      <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-hint">
         {prompts.map((p, i) => (
           <li key={`${p.parent}-${p.missing}-${i}`}>{p.message}</li>
         ))}
       </ul>
-      <p className="mt-2 text-xs text-amber-700">
-        Suggestions only — add related parents on the Scope step if needed.
+      <p className="mt-3 text-xs text-umber-faint">
+        Just a heads-up — add related items on Scope if they belong on this job.
       </p>
     </div>
   );

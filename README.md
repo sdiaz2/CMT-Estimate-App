@@ -20,15 +20,27 @@ SQLite file: prisma/dev.db via DATABASE_URL in .env
 - npm run dev / build / start
 - npm run db:migrate / db:seed / db:push / db:reset
 
+## Workflow
+
+1. **Setup** — project name, location, docs received, notes only (`/projects/new`, then `/projects/[id]`)
+2. **Scope** — pick parent tasks (+ miss-checks) (`/projects/[id]/scope`)
+3. **Takeoffs** — enter plan quantities; fields filter to scoped parents when possible (`/projects/[id]/takeoffs`)
+4. **Trips & hours** — drivers + apply suggestions; compact takeoff summary with Edit link (`/projects/[id]/field`)
+5. **Lab** — lab samples/tests (`/projects/[id]/lab`)
+6. **Worksheet** — Pricing Tool re-key (`/projects/[id]/worksheet`)
+
+After scope save → takeoffs; after takeoffs save → trips & hours.
+
 ## Key routes
 
 | Route | Purpose |
 |-------|--------|
 | / | Project list |
-| /projects/new | Create (name, location, notes, docs received, **takeoff facts**) |
-| /projects/[id] | Edit setup + takeoff facts |
+| /projects/new | Create (name, location, notes, docs received only) |
+| /projects/[id] | Edit setup (no quantity takeoff block) |
 | /projects/[id]/scope | Parent tasks + miss-check |
-| /projects/[id]/field | Takeoff panel + drivers + field lines (OT, vehicle) |
+| /projects/[id]/takeoffs | Plan quantities (TakeoffFacts; scoped sections) |
+| /projects/[id]/field | Drivers + field lines (OT, vehicle); Edit takeoffs link |
 | /projects/[id]/lab | Lab samples/tests |
 | /projects/[id]/worksheet | Pricing Tool re-key (CSV / copy / print) |
 
@@ -136,7 +148,7 @@ Parent: **CIP Deep Foundations (Drilled Straight Shaft Piers)**. Apply suggestio
 - 36 straight-shaft piers @ 10.5 → **4 trips**
 - Schedule **6** trips entered → **6 trips** (overrides pier count even if pier count is filled)
 
-Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the CIP Deep Foundations parent.
+Takeoff fields live on the **Takeoffs** step (`/projects/[id]/takeoffs`). Amber rule copy appears near the CIP Deep Foundations parent.
 
 
 ### Concrete Testing & Reinforcing Steel Observations — trip suggestions
@@ -203,7 +215,7 @@ Separate takeoff fields for private vs public pavement. **No minimum-2** — onl
 - 800 yd³ public @ 900 → **1 trip**
 - 2,000 yd³ public @ 900 → **3 trips**
 
-Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Concrete Testing parent.
+Takeoff fields live on the **Takeoffs** step (`/projects/[id]/takeoffs`). Amber rule copy appears near the Concrete Testing parent.
 
 
 ### Masonry Testing & Observations — trip suggestions
@@ -253,7 +265,7 @@ One trip for every 16 feet of elevator shaft CMU wall height, **for each buildin
 
 12,000 SF LB CMU (3) + 2 buildings × 48 ft shaft (6) + 3 enclosures (3) → **12 trips** total.
 
-Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Masonry Testing parent.
+Takeoff fields live on the **Takeoffs** step (`/projects/[id]/takeoffs`). Amber rule copy appears near the Masonry Testing parent.
 
 ### High-Strength Grout Testing & Observations — trip suggestions
 
@@ -282,7 +294,7 @@ trips = groutBaseplatesInSpecialInspection && padSf > 0
 
 **Miss-check:** If the special-inspection baseplates flag is on but this parent is not in scope, a hint suggests adding it.
 
-Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the High-Strength Grout parent.
+Takeoff fields live on the **Takeoffs** step (`/projects/[id]/takeoffs`). Amber rule copy appears near the High-Strength Grout parent.
 
 ### Structural Steel Inspections — trip suggestions
 
@@ -317,7 +329,7 @@ When `sf` is 0: `trips = 0` (no final alone).
 
 Amber UI shows: `{levels} levels × (ceil(SF/20000)+1 final)`.
 
-Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Structural Steel Inspections parent.
+Takeoff fields live on the **Takeoffs** step (`/projects/[id]/takeoffs`). Amber rule copy appears near the Structural Steel Inspections parent.
 
 
 ### Floor Flatness Testing & Observations — trip suggestions
@@ -352,7 +364,7 @@ If only one input is present, that one is used.
 
 Amber UI shows: `pours: X | SF rule: Y → using max Z`.
 
-Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Floor Flatness parent.
+Takeoff fields live on the **Takeoffs** step (`/projects/[id]/takeoffs`). Amber rule copy appears near the Floor Flatness parent.
 
 
 ### Post-Tension Testing & Observations — trip suggestions
@@ -381,7 +393,7 @@ trips = pourCount > 0 ? 2 * pourCount : 0
 
 Amber UI shows: `Suggested: 2N trips (2 × N pours)`.
 
-Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Post-Tension parent.
+Takeoff fields live on the **Takeoffs** step (`/projects/[id]/takeoffs`). Amber rule copy appears near the Post-Tension parent.
 
 ## Assumptions
 

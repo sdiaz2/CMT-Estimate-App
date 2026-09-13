@@ -86,14 +86,109 @@ export type TakeoffFactsValues = {
   postTensionSlabPourCount?: number | null;
 };
 
+/** Which takeoff sections to show based on scoped parent tasks. */
+export type TakeoffScopeFlags = {
+  earthwork: boolean;
+  foundations: boolean;
+  concrete: boolean;
+  masonry: boolean;
+  grout: boolean;
+  steel: boolean;
+  floorFlatness: boolean;
+  postTension: boolean;
+};
+
+export function takeoffScopeFromParentNames(
+  names: string[]
+): TakeoffScopeFlags {
+  const lower = names.map((n) => n.toLowerCase());
+  const has = (pred: (n: string) => boolean) => lower.some(pred);
+  return {
+    earthwork: has((n) => n.includes("earthwork testing")),
+    foundations: has(
+      (n) => n.includes("cip deep") || n.includes("deep foundations")
+    ),
+    concrete: has(
+      (n) => n.includes("concrete testing") && n.includes("reinforcing")
+    ),
+    masonry: has((n) => n.includes("masonry testing")),
+    grout: has(
+      (n) =>
+        n.includes("high-strength grout") ||
+        (n.includes("grout") && n.includes("testing"))
+    ),
+    steel: has(
+      (n) =>
+        (n === "structural steel inspections" ||
+          (n.includes("structural steel") &&
+            n.includes("inspection") &&
+            !n.includes("bolting") &&
+            !n.includes("welding") &&
+            !n.includes("ndt")))
+    ),
+    floorFlatness: has(
+      (n) =>
+        n.includes("floor flatness") ||
+        n.includes("floor-flatness")
+    ),
+    postTension: has(
+      (n) =>
+        (n.includes("post-tension") || n.includes("post tension")) &&
+        !n.includes("post-installed") &&
+        !n.includes("post installed")
+    ),
+  };
+}
+
+export function showSharedBuildingSf(scope: TakeoffScopeFlags): boolean {
+  return (
+    scope.earthwork ||
+    scope.steel ||
+    scope.grout ||
+    scope.floorFlatness
+  );
+}
+
+export function anyTakeoffSectionVisible(scope: TakeoffScopeFlags): boolean {
+  return (
+    scope.earthwork ||
+    scope.foundations ||
+    scope.concrete ||
+    scope.masonry ||
+    scope.grout ||
+    scope.steel ||
+    scope.floorFlatness ||
+    scope.postTension
+  );
+}
+
+
 /** Shared Takeoff / Project facts fields (used inside a parent <form>). */
 export function TakeoffFactsFields({
   values,
   compact = false,
+  scope,
 }: {
   values?: TakeoffFactsValues;
   compact?: boolean;
+  /** When set, only show sections relevant to scoped parents. */
+  scope?: TakeoffScopeFlags;
 }) {
+  const showAll = !scope;
+  const secEarthwork = showAll || !!scope?.earthwork;
+  const secFoundations = showAll || !!scope?.foundations;
+  const secConcrete = showAll || !!scope?.concrete;
+  const secMasonry = showAll || !!scope?.masonry;
+  const secGrout = showAll || !!scope?.grout;
+  const secSteel = showAll || !!scope?.steel;
+  const secFloorFlatness = showAll || !!scope?.floorFlatness;
+  const secPostTension = showAll || !!scope?.postTension;
+  const showBuildingSf =
+    showAll ||
+    (scope
+      ? showSharedBuildingSf(scope)
+      : true);
+
   const buildingDivisor =
     values?.earthworkSfPerTrip && values.earthworkSfPerTrip > 0
       ? values.earthworkSfPerTrip
@@ -290,11 +385,22 @@ export function TakeoffFactsFields({
           Quantities from the plans
         </h3>
         <p className="mt-1 text-sm text-umber-muted">
-          Enter quantities from the plans. Open a section only if that work is on this job —
+          Enter quantities from the plans
+          {scope
+            ? " for the parents you scoped"
+            : ""}. Open a section only if that work is on this job —
           suggestions stay editable after you apply them.
         </p>
+        {scope && !anyTakeoffSectionVisible(scope) && (
+          <p className="mt-2 text-sm text-umber-muted">
+            No quantity fields match the current scope. Add earthwork, foundations,
+            concrete, masonry, grout, steel, floor flatness, or post-tension on Scope
+            if you need takeoffs here.
+          </p>
+        )}
       </div>
 
+      {showBuildingSf && (
       <div>
         <label className="block max-w-md">
           <span className="text-sm font-medium text-umber-soft">
@@ -318,7 +424,9 @@ export function TakeoffFactsFields({
           </span>
         </label>
       </div>
+      )}
 
+      {secEarthwork && (
       <details className="takeoff-section" open={compact}>
         <summary>Earthwork</summary>
 
@@ -397,6 +505,9 @@ export function TakeoffFactsFields({
         </div>
       </details>
 
+      )}
+
+      {secEarthwork && (
       <details className="takeoff-section" open={compact}>
         <summary>Pavement</summary>
 
@@ -496,6 +607,9 @@ export function TakeoffFactsFields({
         </label>
       </details>
 
+      )}
+
+      {secEarthwork && (
       <details className="takeoff-section" open={compact}>
         <summary>Sidewalks</summary>
 
@@ -563,6 +677,9 @@ export function TakeoffFactsFields({
         </div>
       </details>
 
+      )}
+
+      {secEarthwork && (
       <details className="takeoff-section" open={compact}>
         <summary>Utility trenches</summary>
 
@@ -607,6 +724,9 @@ export function TakeoffFactsFields({
         </div>
       </details>
 
+      )}
+
+      {secFoundations && (
       <details className="takeoff-section" open={compact}>
         <summary>Deep foundations (piers)</summary>
 
@@ -746,6 +866,9 @@ export function TakeoffFactsFields({
         )}
       </details>
 
+      )}
+
+      {secConcrete && (
       <details className="takeoff-section" open={compact}>
         <summary>Concrete & rebar</summary>
 
@@ -977,6 +1100,9 @@ export function TakeoffFactsFields({
       </details>
 
 
+      )}
+
+      {secMasonry && (
       <details className="takeoff-section" open={compact}>
         <summary>Masonry</summary>
 
@@ -1155,6 +1281,9 @@ export function TakeoffFactsFields({
         )}
       </details>
 
+      )}
+
+      {secGrout && (
       <details className="takeoff-section" open={compact}>
         <summary>High-strength grout</summary>
 
@@ -1229,6 +1358,9 @@ export function TakeoffFactsFields({
         )}
       </details>
 
+      )}
+
+      {secSteel && (
       <details className="takeoff-section" open={compact}>
         <summary>Structural steel</summary>
 
@@ -1339,6 +1471,9 @@ export function TakeoffFactsFields({
         )}
       </details>
 
+      )}
+
+      {secFloorFlatness && (
       <details className="takeoff-section" open={compact}>
         <summary>Floor flatness</summary>
         <p className="mb-3 text-xs text-umber-faint">
@@ -1433,6 +1568,9 @@ export function TakeoffFactsFields({
         )}
       </details>
 
+      )}
+
+      {secPostTension && (
       <details className="takeoff-section" open={compact}>
         <summary>Post-tension</summary>
         <p className="mb-3 text-xs text-umber-faint">
@@ -1482,8 +1620,9 @@ export function TakeoffFactsFields({
           </div>
         )}
       </details>
+      )}
 
-      {(showBuilding || showPavement || showSidewalk || showUtilityTrench) && (
+      {secEarthwork && (showBuilding || showPavement || showSidewalk || showUtilityTrench) && (
         <div className="hint-banner px-4 py-3 text-sm">
           {showBuilding && (
             <p>

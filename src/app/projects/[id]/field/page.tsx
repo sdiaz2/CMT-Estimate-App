@@ -6,12 +6,10 @@ import {
   applyFieldSuggestions,
   getMissChecks,
   updateParentDrivers,
-  updateProjectTakeoff,
 } from "@/lib/actions";
 import { StepNav } from "@/components/StepNav";
 import { MissCheckBanner } from "@/components/MissCheckBanner";
 import { LineItemsEditor } from "@/components/LineItemsEditor";
-import { TakeoffFactsFields } from "@/components/TakeoffFacts";
 import {
   DEFAULT_EARTHWORK_SF_PER_TRIP,
   DEFAULT_PAVEMENT_LF_PER_TRIP,
@@ -181,173 +179,73 @@ export default async function FieldPage({
 
       <MissCheckBanner prompts={prompts} />
 
-      <section className="mb-8 card-soft p-6">
-        <form action={updateProjectTakeoff.bind(null, id)} className="space-y-4">
-          <TakeoffFactsFields
-            compact
-            values={{
-              buildingAreaSf: project.buildingAreaSf,
-              moistureConditionedSubgrade: project.moistureConditionedSubgrade,
-              flexibleBaseCap: project.flexibleBaseCap,
-              earthworkSfPerTrip: project.earthworkSfPerTrip,
-              moistureDepthNote: project.moistureDepthNote,
-              flexibleBaseThicknessNote: project.flexibleBaseThicknessNote,
-              pavementAreaSf: project.pavementAreaSf,
-              limeTreatedPavementSubgrade: project.limeTreatedPavementSubgrade,
-              pavementSfPerTrip: project.pavementSfPerTrip,
-              pavementSubgradeLf: project.pavementSubgradeLf,
-              pavementLfPerTrip: project.pavementLfPerTrip,
-              pavementNotes: project.pavementNotes,
-              sidewalkLf: project.sidewalkLf,
-              sidewalksBunchedTogether: project.sidewalksBunchedTogether,
-              sidewalkSpreadLfPerTrip: project.sidewalkSpreadLfPerTrip,
-              sidewalkBunchedLfPerTrip: project.sidewalkBunchedLfPerTrip,
-              utilityTrenchLf: project.utilityTrenchLf,
-              utilityTrenchLfPerTrip: project.utilityTrenchLfPerTrip,
-              foundationScheduleTrips: project.foundationScheduleTrips,
-              pierCount: project.pierCount,
-              pierType: project.pierType,
-              piersPerTripStraight: project.piersPerTripStraight,
-              piersPerTripCased: project.piersPerTripCased,
-              piersPerTripBelled: project.piersPerTripBelled,
-              concreteYd3GradeBeamsPierCaps:
-                project.concreteYd3GradeBeamsPierCaps,
-              yd3PerTripGradeBeams: project.yd3PerTripGradeBeams,
-              concreteYd3BuildingSlab: project.concreteYd3BuildingSlab,
-              yd3PerTripBuildingSlab: project.yd3PerTripBuildingSlab,
-              concreteYd3PrivatePavement: project.concreteYd3PrivatePavement,
-              yd3PerTripPrivatePavement: project.yd3PerTripPrivatePavement,
-              concreteYd3PublicPavement: project.concreteYd3PublicPavement,
-              yd3PerTripPublicPavement: project.yd3PerTripPublicPavement,
-              masonryLoadBearingCmuSf: project.masonryLoadBearingCmuSf,
-              masonrySfPerTripLoadBearingCmu:
-                project.masonrySfPerTripLoadBearingCmu,
-              masonryElevatorBuildingCount:
-                project.masonryElevatorBuildingCount,
-              masonryElevatorShaftHeightFt:
-                project.masonryElevatorShaftHeightFt,
-              masonryFtPerTripElevatorShaft:
-                project.masonryFtPerTripElevatorShaft,
-              masonryCmuEnclosureCount: project.masonryCmuEnclosureCount,
-              groutBaseplatesInSpecialInspection:
-                project.groutBaseplatesInSpecialInspection,
-              buildingPadSf: project.buildingPadSf,
-              ft2PerTripGroutBaseplates: project.ft2PerTripGroutBaseplates,
-              structuralSteelBuildingSf: project.structuralSteelBuildingSf,
-              structuralSteelSfPerTrip: project.structuralSteelSfPerTrip,
-              structuralSteelFinalInspectionTrips:
-                project.structuralSteelFinalInspectionTrips,
-              structureLevelCount: project.structureLevelCount,
-              slabOnGradePourCount: project.slabOnGradePourCount,
-              floorFlatnessSf: project.floorFlatnessSf,
-              ft2PerTripFloorFlatness: project.ft2PerTripFloorFlatness,
-              postTensionSlabPourCount: project.postTensionSlabPourCount,
-            }}
-          />
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="submit"
-              className="btn-secondary px-3 py-1.5 text-xs"
-            >
-              Save takeoff facts
-            </button>
-            {takeoffApplies && (
-              <p className="text-xs text-umber-muted">
-                Earthwork preview: <strong>{suggestion.total} trips</strong>
-                {labels.combined ? ` — ${labels.combined}` : ""}
+      <section className="mb-8 card-soft p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-2">
+            <div>
+              <h3 className="text-sm font-semibold text-umber">Plan quantities</h3>
+              <p className="mt-1 text-xs text-umber-muted">
+                Takeoffs were entered earlier. Edit them anytime, then apply
+                suggestions below.
               </p>
-            )}
-            {foundationTakeoffApplies && (
-              <p className="text-xs text-umber-muted">
-                Foundation preview:{" "}
-                <strong>{foundationSuggestion.trips} trips</strong>
-                {foundationSuggestion.source === "schedule"
-                  ? " (from schedule)"
-                  : " (from pier count)"}
-              </p>
-            )}
-            {concreteTakeoffApplies && (
-              <p className="text-xs text-umber-muted">
-                Concrete preview:{" "}
-                <strong>{concreteSuggestion.total} trips</strong>
-                {[
-                  concreteSuggestion.gradeBeamsPierCapsTrips > 0
-                    ? `grade beams/pier caps ${concreteSuggestion.gradeBeamsPierCapsTrips}`
-                    : null,
-                  concreteSuggestion.buildingSlabTrips > 0
-                    ? `building slab ${concreteSuggestion.buildingSlabTrips}`
-                    : null,
-                  concreteSuggestion.privatePavementTrips > 0
-                    ? `private pavement ${concreteSuggestion.privatePavementTrips}`
-                    : null,
-                  concreteSuggestion.publicPavementTrips > 0
-                    ? `public pavement ${concreteSuggestion.publicPavementTrips}`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" + ")
-                  ? ` (${[
-                      concreteSuggestion.gradeBeamsPierCapsTrips > 0
-                        ? `grade beams/pier caps ${concreteSuggestion.gradeBeamsPierCapsTrips}`
-                        : null,
-                      concreteSuggestion.buildingSlabTrips > 0
-                        ? `building slab ${concreteSuggestion.buildingSlabTrips}`
-                        : null,
-                      concreteSuggestion.privatePavementTrips > 0
-                        ? `private pavement ${concreteSuggestion.privatePavementTrips}`
-                        : null,
-                      concreteSuggestion.publicPavementTrips > 0
-                        ? `public pavement ${concreteSuggestion.publicPavementTrips}`
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" + ")})`
-                  : ""}
-              </p>
-            )}
-            {groutTakeoffApplies && (
-              <p className="text-xs text-umber-muted">
-                Grout preview:{" "}
-                <strong>{groutSuggestion.trips} trips</strong>
-                {groutSuggestion.padSfSource === "buildingAreaSf"
-                  ? " (pad from building area)"
-                  : " (from building pad)"}
-              </p>
-            )}
-            {steelTakeoffApplies && (
-              <p className="text-xs text-umber-muted">
-                Structural Steel Inspections preview:{" "}
-                <strong>{steelSuggestion.trips} trips</strong> (
-                {steelSuggestion.structureLevelCount} levels ×{" "}
-                {steelSuggestion.perLevelTrips}
-                {steelSuggestion.sfSource === "buildingAreaSf"
-                  ? "; SF from building area"
-                  : ""})
-              </p>
-            )}
-            {floorFlatnessTakeoffApplies && (
-              <p className="text-xs text-umber-muted">
-                Floor Flatness preview:{" "}
-                <strong>{floorFlatnessSuggestion.trips} trips</strong> (pours:{" "}
-                {floorFlatnessSuggestion.pourTrips} | SF rule:{" "}
-                {floorFlatnessSuggestion.sfTrips} → max)
-                {floorFlatnessSuggestion.sfSource === "buildingAreaSf"
-                  ? " (SF from building area)"
-                  : ""}
-              </p>
-            )}
-            {postTensionTakeoffApplies && (
-              <p className="text-xs text-umber-muted">
-                Post-Tension preview:{" "}
-                <strong>{postTensionSuggestion.trips} trips</strong> (2 ×{" "}
-                {postTensionSuggestion.pourCount} pours)
-                {postTensionSuggestion.pourSource === "slabOnGradePourCount"
-                  ? " (from slab-on-grade pours)"
-                  : ""}
-              </p>
-            )}
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-umber-muted">
+              {takeoffApplies && (
+                <p>
+                  Earthwork: <strong>{suggestion.total} trips</strong>
+                  {labels.combined ? ` — ${labels.combined}` : ""}
+                </p>
+              )}
+              {foundationTakeoffApplies && (
+                <p>
+                  Foundations:{" "}
+                  <strong>{foundationSuggestion.trips} trips</strong>
+                  {foundationSuggestion.source === "schedule"
+                    ? " (schedule)"
+                    : " (pier count)"}
+                </p>
+              )}
+              {concreteTakeoffApplies && (
+                <p>
+                  Concrete: <strong>{concreteSuggestion.total} trips</strong>
+                </p>
+              )}
+              {masonryTakeoffApplies && (
+                <p>
+                  Masonry: <strong>{masonrySuggestion.total} trips</strong>
+                </p>
+              )}
+              {groutTakeoffApplies && (
+                <p>
+                  Grout: <strong>{groutSuggestion.trips} trips</strong>
+                </p>
+              )}
+              {steelTakeoffApplies && (
+                <p>
+                  Steel: <strong>{steelSuggestion.trips} trips</strong>
+                </p>
+              )}
+              {floorFlatnessTakeoffApplies && (
+                <p>
+                  Floor flatness:{" "}
+                  <strong>{floorFlatnessSuggestion.trips} trips</strong>
+                </p>
+              )}
+              {postTensionTakeoffApplies && (
+                <p>
+                  Post-tension:{" "}
+                  <strong>{postTensionSuggestion.trips} trips</strong>
+                </p>
+              )}
+            </div>
           </div>
-        </form>
+          <Link
+            href={`/projects/${id}/takeoffs`}
+            className="btn-secondary shrink-0 text-sm"
+          >
+            Edit takeoffs
+          </Link>
+        </div>
       </section>
 
       {fieldParents.length === 0 ? (
@@ -446,7 +344,7 @@ export default async function FieldPage({
                           Moisture-conditioned subgrade + flexible base cap
                           {ruleAppliesBuilding
                             ? " (flags on for this project)."
-                            : " (turn on both flags in Takeoff if that describes this job)."}
+                            : " (turn on both flags on Takeoffs if that describes this job)."}
                         </p>
                       </div>
                     )}
@@ -726,7 +624,14 @@ export default async function FieldPage({
       {hasEarthworkTesting && !takeoffApplies && (
         <p className="mt-4 text-xs text-umber-faint">
           Tip: enter building SF, pavement (lime SF or non-lime LF), sidewalk LF,
-          and/or utility trench LF in Takeoff above. Defaults: building{" "}
+          and/or utility trench LF on{" "}
+          <Link
+            href={`/projects/${id}/takeoffs`}
+            className="font-medium text-terracotta hover:text-terracotta-hover"
+          >
+            Takeoffs
+          </Link>
+          . Defaults: building{" "}
           {DEFAULT_EARTHWORK_SF_PER_TRIP.toLocaleString()} SF/trip; lime pavement{" "}
           {DEFAULT_PAVEMENT_SF_PER_TRIP.toLocaleString()} SF/trip; non-lime{" "}
           {DEFAULT_PAVEMENT_LF_PER_TRIP} LF/trip; sidewalks{" "}

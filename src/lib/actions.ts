@@ -333,17 +333,15 @@ export async function createProject(formData: FormData) {
   const location = String(formData.get("location") || "").trim();
   const notes = String(formData.get("notes") || "").trim();
   const docsReceived = String(formData.get("docsReceived") || "").trim();
-  const takeoff = takeoffDataFromForm(formData);
 
   const project = await prisma.project.create({
-    data: { name, location, notes, docsReceived, ...takeoff },
+    data: { name, location, notes, docsReceived },
   });
 
   redirect(`/projects/${project.id}/scope`);
 }
 
 export async function updateProject(projectId: string, formData: FormData) {
-  const takeoff = takeoffDataFromForm(formData);
   await prisma.project.update({
     where: { id: projectId },
     data: {
@@ -351,14 +349,13 @@ export async function updateProject(projectId: string, formData: FormData) {
       location: String(formData.get("location") || "").trim(),
       notes: String(formData.get("notes") || "").trim(),
       docsReceived: String(formData.get("docsReceived") || "").trim(),
-      ...takeoff,
     },
   });
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}/scope`);
 }
 
-/** Save takeoff / project facts without leaving the current page. */
+/** Save plan quantities, then continue to trips & hours. */
 export async function updateProjectTakeoff(projectId: string, formData: FormData) {
   const takeoff = takeoffDataFromForm(formData);
   await prisma.project.update({
@@ -366,7 +363,9 @@ export async function updateProjectTakeoff(projectId: string, formData: FormData
     data: takeoff,
   });
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/takeoffs`);
   revalidatePath(`/projects/${projectId}/field`);
+  redirect(`/projects/${projectId}/field`);
 }
 
 export async function deleteProject(projectId: string) {
@@ -420,7 +419,9 @@ export async function setProjectScope(projectId: string, formData: FormData) {
   }
 
   revalidatePath(`/projects/${projectId}`);
-  redirect(`/projects/${projectId}/field`);
+  revalidatePath(`/projects/${projectId}/scope`);
+  revalidatePath(`/projects/${projectId}/takeoffs`);
+  redirect(`/projects/${projectId}/takeoffs`);
 }
 
 export async function updateParentDrivers(

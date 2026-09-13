@@ -14,6 +14,12 @@ const STEPS = [
     href: (id: string) => `/projects/${id}/scope`,
   },
   {
+    key: "takeoffs",
+    label: "Takeoffs",
+    short: "Plan quantities",
+    href: (id: string) => `/projects/${id}/takeoffs`,
+  },
+  {
     key: "field",
     label: "Trips & hours",
     short: "Trips and hours",
@@ -21,7 +27,7 @@ const STEPS = [
   },
   {
     key: "lab",
-    label: "Lab tests",
+    label: "Lab",
     short: "Lab tests",
     href: (id: string) => `/projects/${id}/lab`,
   },

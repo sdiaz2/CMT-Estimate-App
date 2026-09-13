@@ -1,8 +1,8 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { updateProject } from "@/lib/actions";
 import { StepNav } from "@/components/StepNav";
-import { TakeoffFactsFields } from "@/components/TakeoffFacts";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +21,8 @@ export default async function ProjectSetupPage({
       <div className="mb-8">
         <h1 className="text-3xl font-semibold tracking-tight text-umber">{project.name}</h1>
         <p className="page-lead mt-2">
-          Confirm the job details and any plan quantities. Save when ready —
-          then pick which testing parents are in scope.
+          Confirm the job details. Plan quantities are entered after scope on
+          the Takeoffs step.
         </p>
       </div>
 
@@ -66,68 +66,16 @@ export default async function ProjectSetupPage({
           />
         </label>
 
-        <div className="divider-soft pt-2">
-          <TakeoffFactsFields
-            values={{
-              buildingAreaSf: project.buildingAreaSf,
-              moistureConditionedSubgrade: project.moistureConditionedSubgrade,
-              flexibleBaseCap: project.flexibleBaseCap,
-              earthworkSfPerTrip: project.earthworkSfPerTrip,
-              moistureDepthNote: project.moistureDepthNote,
-              flexibleBaseThicknessNote: project.flexibleBaseThicknessNote,
-              pavementAreaSf: project.pavementAreaSf,
-              limeTreatedPavementSubgrade: project.limeTreatedPavementSubgrade,
-              pavementSfPerTrip: project.pavementSfPerTrip,
-              pavementSubgradeLf: project.pavementSubgradeLf,
-              pavementLfPerTrip: project.pavementLfPerTrip,
-              pavementNotes: project.pavementNotes,
-              sidewalkLf: project.sidewalkLf,
-              sidewalksBunchedTogether: project.sidewalksBunchedTogether,
-              sidewalkSpreadLfPerTrip: project.sidewalkSpreadLfPerTrip,
-              sidewalkBunchedLfPerTrip: project.sidewalkBunchedLfPerTrip,
-              utilityTrenchLf: project.utilityTrenchLf,
-              utilityTrenchLfPerTrip: project.utilityTrenchLfPerTrip,
-              foundationScheduleTrips: project.foundationScheduleTrips,
-              pierCount: project.pierCount,
-              pierType: project.pierType,
-              piersPerTripStraight: project.piersPerTripStraight,
-              piersPerTripCased: project.piersPerTripCased,
-              piersPerTripBelled: project.piersPerTripBelled,
-              concreteYd3GradeBeamsPierCaps:
-                project.concreteYd3GradeBeamsPierCaps,
-              yd3PerTripGradeBeams: project.yd3PerTripGradeBeams,
-              concreteYd3BuildingSlab: project.concreteYd3BuildingSlab,
-              yd3PerTripBuildingSlab: project.yd3PerTripBuildingSlab,
-              concreteYd3PrivatePavement: project.concreteYd3PrivatePavement,
-              yd3PerTripPrivatePavement: project.yd3PerTripPrivatePavement,
-              concreteYd3PublicPavement: project.concreteYd3PublicPavement,
-              yd3PerTripPublicPavement: project.yd3PerTripPublicPavement,
-              masonryLoadBearingCmuSf: project.masonryLoadBearingCmuSf,
-              masonrySfPerTripLoadBearingCmu:
-                project.masonrySfPerTripLoadBearingCmu,
-              masonryElevatorBuildingCount:
-                project.masonryElevatorBuildingCount,
-              masonryElevatorShaftHeightFt:
-                project.masonryElevatorShaftHeightFt,
-              masonryFtPerTripElevatorShaft:
-                project.masonryFtPerTripElevatorShaft,
-              masonryCmuEnclosureCount: project.masonryCmuEnclosureCount,
-              groutBaseplatesInSpecialInspection:
-                project.groutBaseplatesInSpecialInspection,
-              buildingPadSf: project.buildingPadSf,
-              ft2PerTripGroutBaseplates: project.ft2PerTripGroutBaseplates,
-              structuralSteelBuildingSf: project.structuralSteelBuildingSf,
-              structuralSteelSfPerTrip: project.structuralSteelSfPerTrip,
-              structuralSteelFinalInspectionTrips:
-                project.structuralSteelFinalInspectionTrips,
-              structureLevelCount: project.structureLevelCount,
-              slabOnGradePourCount: project.slabOnGradePourCount,
-              floorFlatnessSf: project.floorFlatnessSf,
-              ft2PerTripFloorFlatness: project.ft2PerTripFloorFlatness,
-              postTensionSlabPourCount: project.postTensionSlabPourCount,
-            }}
-          />
-        </div>
+        <p className="text-xs text-umber-faint">
+          Enter quantities after scope —{" "}
+          <Link
+            href={`/projects/${id}/takeoffs`}
+            className="font-medium text-terracotta hover:text-terracotta-hover"
+          >
+            open Takeoffs
+          </Link>
+          .
+        </p>
 
         <div className="flex justify-end">
           <button

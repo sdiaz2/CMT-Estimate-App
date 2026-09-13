@@ -1,5 +1,4 @@
 import { createProject } from "@/lib/actions";
-import { TakeoffFactsFields } from "@/components/TakeoffFacts";
 import Link from "next/link";
 
 export default function NewProjectPage() {
@@ -16,8 +15,8 @@ export default function NewProjectPage() {
           New estimate
         </h1>
         <p className="page-lead mt-2">
-          Name the job and note what docs you have. Quantities are optional for
-          now — open a section only if you already know those numbers.
+          Name the job and note what docs you have. Plan quantities come after
+          you pick scope.
         </p>
       </div>
 
@@ -60,9 +59,10 @@ export default function NewProjectPage() {
           />
         </label>
 
-        <div className="divider-soft pt-2">
-          <TakeoffFactsFields />
-        </div>
+        <p className="text-xs text-umber-faint">
+          Tip: enter plan quantities on the <strong>Takeoffs</strong> step after
+          you pick scope.
+        </p>
 
         <div className="flex flex-wrap justify-end gap-2.5 pt-2">
           <Link href="/" className="btn-secondary text-sm">

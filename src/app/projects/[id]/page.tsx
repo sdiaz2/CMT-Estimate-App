@@ -130,6 +130,7 @@ export default async function ProjectSetupPage({
               slabOnGradePourCount: project.slabOnGradePourCount,
               floorFlatnessSf: project.floorFlatnessSf,
               ft2PerTripFloorFlatness: project.ft2PerTripFloorFlatness,
+              postTensionSlabPourCount: project.postTensionSlabPourCount,
             }}
           />
         </div>

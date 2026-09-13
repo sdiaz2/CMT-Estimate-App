@@ -11,6 +11,7 @@ import {
   applyMasonryTakeoffToDrivers,
   applyStructuralSteelTakeoffToDrivers,
   applyFloorFlatnessTakeoffToDrivers,
+  applyPostTensionTakeoffToDrivers,
   DEFAULT_EARTHWORK_SF_PER_TRIP,
   DEFAULT_FT2_PER_TRIP_GROUT_BASEPLATES,
   DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS,
@@ -38,6 +39,7 @@ import {
   hasMasonryTakeoff,
   hasStructuralSteelTakeoff,
   hasFloorFlatnessTakeoff,
+  hasPostTensionTakeoff,
   isCipDeepFoundationsParent,
   isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
@@ -45,6 +47,7 @@ import {
   isMasonryTestingParent,
   isStructuralSteelParent,
   isFloorFlatnessParent,
+  isPostTensionParent,
   missCheckPrompts,
   normalizePierType,
   parseDrivers,
@@ -174,6 +177,10 @@ function takeoffDataFromForm(formData: FormData) {
   const ft2PerTripFloorFlatnessRaw = parseOptionalFloat(
     formData,
     "ft2PerTripFloorFlatness"
+  );
+  const postTensionSlabPourCountRaw = parseOptionalFloat(
+    formData,
+    "postTensionSlabPourCount"
   );
   return {
     buildingAreaSf,
@@ -313,6 +320,10 @@ function takeoffDataFromForm(formData: FormData) {
       ft2PerTripFloorFlatnessRaw !== null && ft2PerTripFloorFlatnessRaw > 0
         ? ft2PerTripFloorFlatnessRaw
         : DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS,
+    postTensionSlabPourCount:
+      postTensionSlabPourCountRaw !== null && postTensionSlabPourCountRaw > 0
+        ? Math.floor(postTensionSlabPourCountRaw)
+        : null,
   };
 }
 
@@ -516,6 +527,15 @@ export async function applyFieldSuggestions(projectId: string, parentId: string)
       where: { id: parentId },
       data: { drivers: JSON.stringify(drivers) },
     });
+  } else if (
+    isPostTensionParent(parent.catalog.name) &&
+    hasPostTensionTakeoff(takeoff)
+  ) {
+    drivers = applyPostTensionTakeoffToDrivers(drivers, takeoff);
+    await prisma.projectParent.update({
+      where: { id: parentId },
+      data: { drivers: JSON.stringify(drivers) },
+    });
   }
 
   const suggestions = suggestFieldLines(parent.catalog.name, drivers, takeoff);
@@ -610,6 +630,15 @@ export async function applyAllFieldSuggestions(projectId: string) {
       hasFloorFlatnessTakeoff(takeoff)
     ) {
       drivers = applyFloorFlatnessTakeoffToDrivers(drivers, takeoff);
+      await prisma.projectParent.update({
+        where: { id: parent.id },
+        data: { drivers: JSON.stringify(drivers) },
+      });
+    } else if (
+      isPostTensionParent(parent.catalog.name) &&
+      hasPostTensionTakeoff(takeoff)
+    ) {
+      drivers = applyPostTensionTakeoffToDrivers(drivers, takeoff);
       await prisma.projectParent.update({
         where: { id: parent.id },
         data: { drivers: JSON.stringify(drivers) },

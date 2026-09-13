@@ -46,6 +46,7 @@ import {
   hasMasonryTakeoff,
   hasStructuralSteelTakeoff,
   hasFloorFlatnessTakeoff,
+  hasPostTensionTakeoff,
   isCipDeepFoundationsParent,
   isConcreteTestingReinforcingParent,
   isEarthworkTestingParent,
@@ -53,8 +54,10 @@ import {
   isMasonryTestingParent,
   isStructuralSteelParent,
   isFloorFlatnessParent,
+  isPostTensionParent,
   masonryTripRuleLabels,
   floorFlatnessTripRuleLabel,
+  postTensionTripRuleLabel,
   parseDrivers,
   suggestConcreteTrips,
   suggestEarthworkTrips,
@@ -63,6 +66,7 @@ import {
   suggestMasonryTrips,
   suggestStructuralSteelTrips,
   suggestFloorFlatnessTrips,
+  suggestPostTensionTrips,
   structuralSteelTripRuleLabel,
   takeoffFromProject,
 } from "@/lib/heuristics";
@@ -120,6 +124,9 @@ export default async function FieldPage({
   const floorFlatnessSuggestion = suggestFloorFlatnessTrips(takeoff);
   const floorFlatnessLabel = floorFlatnessTripRuleLabel(takeoff);
   const floorFlatnessTakeoffApplies = hasFloorFlatnessTakeoff(takeoff);
+  const postTensionSuggestion = suggestPostTensionTrips(takeoff);
+  const postTensionLabel = postTensionTripRuleLabel(takeoff);
+  const postTensionTakeoffApplies = hasPostTensionTakeoff(takeoff);
   const buildingSf = takeoff.buildingAreaSf ?? 0;
   const pavementSf = takeoff.pavementAreaSf ?? 0;
   const pavementLf = takeoff.pavementSubgradeLf ?? 0;
@@ -148,6 +155,9 @@ export default async function FieldPage({
   );
   const hasFloorFlatness = fieldParents.some((p) =>
     isFloorFlatnessParent(p.catalog.name)
+  );
+  const hasPostTension = fieldParents.some((p) =>
+    isPostTensionParent(p.catalog.name)
   );
   const takeoffApplies = hasEarthworkTakeoff(takeoff);
 
@@ -243,6 +253,7 @@ export default async function FieldPage({
               slabOnGradePourCount: project.slabOnGradePourCount,
               floorFlatnessSf: project.floorFlatnessSf,
               ft2PerTripFloorFlatness: project.ft2PerTripFloorFlatness,
+              postTensionSlabPourCount: project.postTensionSlabPourCount,
             }}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -337,6 +348,18 @@ export default async function FieldPage({
                   : ""}
               </p>
             )}
+            {postTensionTakeoffApplies && (
+              <p className="text-xs text-slate-600">
+                Post-Tension preview:{" "}
+                <strong>{postTensionSuggestion.trips} trips</strong> (Pre-pour:{" "}
+                {postTensionSuggestion.prePourTrips} | Tendon stressing:{" "}
+                {postTensionSuggestion.stressingTrips} | Total:{" "}
+                {postTensionSuggestion.trips})
+                {postTensionSuggestion.pourSource === "slabOnGradePourCount"
+                  ? " (from slab-on-grade pours)"
+                  : ""}
+              </p>
+            )}
           </div>
         </form>
       </section>
@@ -362,6 +385,7 @@ export default async function FieldPage({
             const isGrout = isHighStrengthGroutParent(parent.catalog.name);
             const isSteel = isStructuralSteelParent(parent.catalog.name);
             const isFloorFlatness = isFloorFlatnessParent(parent.catalog.name);
+            const isPostTension = isPostTensionParent(parent.catalog.name);
             const displayDrivers =
               isEarthwork && takeoffApplies && n(drivers.trips) === 0
                 ? { ...drivers, trips: suggestion.total }
@@ -392,7 +416,14 @@ export default async function FieldPage({
                                 ...drivers,
                                 trips: floorFlatnessSuggestion.trips,
                               }
-                            : drivers;
+                            : isPostTension &&
+                                postTensionTakeoffApplies &&
+                                n(drivers.trips) === 0
+                              ? {
+                                  ...drivers,
+                                  trips: postTensionSuggestion.trips,
+                                }
+                              : drivers;
 
             return (
               <section
@@ -636,6 +667,29 @@ export default async function FieldPage({
                   </div>
                 )}
 
+                {isPostTension && (
+                  <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <p className="font-medium">{postTensionLabel}</p>
+                    {postTensionTakeoffApplies && (
+                      <p className="mt-1 text-sm">
+                        Pre-pour: {postTensionSuggestion.prePourTrips} trips |
+                        Tendon stressing:{" "}
+                        {postTensionSuggestion.stressingTrips} trips | Total:{" "}
+                        <strong>{postTensionSuggestion.trips}</strong>
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-amber-900/80">
+                      A) Pre-pour Observation: 1 trip per building slab pour. B)
+                      Tendon Stressing: 1 trip per pour. Total = 2 × pours.
+                      Dedicated pour count falls back to slab-on-grade (often the
+                      same). Apply suggestions sets Trips and breaks out Pre-pour
+                      vs Tendon Stressing lines (each with trips = pour count),
+                      then cascades hours (~4 hr/trip) and Vehicle. Numbers stay
+                      editable.
+                    </p>
+                  </div>
+                )}
+
                 <form
                   action={updateParentDrivers.bind(null, id, parent.id)}
                   className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8"
@@ -749,6 +803,14 @@ export default async function FieldPage({
           pour count and/or floor flatness SF (falls back to building area).
           Suggested trips = max(pours, ceil(SF /{" "}
           {DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS.toLocaleString()})).
+        </p>
+      )}
+
+      {hasPostTension && !postTensionTakeoffApplies && (
+        <p className="mt-4 text-xs text-slate-500">
+          Tip: for Post-Tension Testing &amp; Observations, enter post-tension
+          slab pour count (or rely on slab-on-grade pours). Suggested trips = 2 ×
+          pours (Pre-pour + Tendon stressing).
         </p>
       )}
     </div>

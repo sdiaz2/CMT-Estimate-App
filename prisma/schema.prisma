@@ -133,6 +133,8 @@ model Project {
   floorFlatnessSf             Float?
   /// SF per Floor Flatness trip (default 30000)
   ft2PerTripFloorFlatness     Float    @default(30000)
+  /// Post-tension building slab pour count (Int); often same as slab-on-grade pours — if null, fall back to slabOnGradePourCount
+  postTensionSlabPourCount    Int?
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
   parents                     ProjectParent[]

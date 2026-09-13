@@ -155,9 +155,22 @@ const catalog: CatalogSeed[] = [
       { description: "Vehicle Charge", units: "each", includesVehicle: true, qtyHint: "vehicleTrips", sortOrder: 2 },
     ],
   },
+
+  {
+    name: "Post-Tension Testing & Observations",
+    sortOrder: 13,
+    category: "field",
+    relatedHints: ["Concrete Testing & Reinforcing Steel Observations", "Laboratory Testing"],
+    defaultDrivers: { trips: 6, hours: 24, otHours: 3.6, vehicleTrips: 6 },
+    templates: [
+      { description: "Pre-pour Observation", units: "hours", qtyHint: "pre-pour trips × ~4 hr", sortOrder: 1 },
+      { description: "Tendon Stressing", units: "hours", qtyHint: "stressing trips × ~4 hr", sortOrder: 2 },
+      { description: "Vehicle Charge", units: "each", includesVehicle: true, qtyHint: "vehicleTrips (= 2 × pours)", sortOrder: 3 },
+    ],
+  },
   {
     name: "Structural Steel Inspections",
-    sortOrder: 13,
+    sortOrder: 14,
     category: "field",
     relatedHints: [],
     defaultDrivers: { trips: 6, hours: 24, vehicleTrips: 6 },
@@ -169,7 +182,7 @@ const catalog: CatalogSeed[] = [
   {
     // Optional breakout — add only if bolting is scoped separately from primary Structural Steel Inspections
     name: "Structural Steel (Bolting)",
-    sortOrder: 14,
+    sortOrder: 15,
     category: "field",
     relatedHints: [],
     defaultDrivers: { trips: 5, hours: 20, vehicleTrips: 5 },
@@ -181,7 +194,7 @@ const catalog: CatalogSeed[] = [
   {
     // Optional breakout — add only if welding is scoped separately from primary Structural Steel Inspections
     name: "Structural Steel (Welding)",
-    sortOrder: 15,
+    sortOrder: 16,
     category: "field",
     relatedHints: [],
     defaultDrivers: { trips: 5, hours: 20, vehicleTrips: 5 },
@@ -193,7 +206,7 @@ const catalog: CatalogSeed[] = [
   {
     // Optional breakout — add only if NDT is scoped separately from primary Structural Steel Inspections
     name: "Structural Steel (NDT)",
-    sortOrder: 16,
+    sortOrder: 17,
     category: "field",
     relatedHints: [],
     defaultDrivers: { trips: 3, hours: 12, vehicleTrips: 3 },
@@ -204,7 +217,7 @@ const catalog: CatalogSeed[] = [
   },
   {
     name: "Fire-resistant (Penetrations & joints) Testing & Observations",
-    sortOrder: 17,
+    sortOrder: 18,
     category: "field",
     relatedHints: [],
     defaultDrivers: { trips: 4, hours: 16, vehicleTrips: 4 },
@@ -215,7 +228,7 @@ const catalog: CatalogSeed[] = [
   },
   {
     name: "Vapor Emission Testing",
-    sortOrder: 18,
+    sortOrder: 19,
     category: "field",
     relatedHints: [],
     defaultDrivers: { trips: 2, hours: 8, vehicleTrips: 2 },
@@ -226,7 +239,7 @@ const catalog: CatalogSeed[] = [
   },
   {
     name: "EIFS Observations (Lumpsum)",
-    sortOrder: 19,
+    sortOrder: 20,
     category: "field",
     relatedHints: [],
     defaultDrivers: { trips: 1, hours: 0 },
@@ -236,7 +249,7 @@ const catalog: CatalogSeed[] = [
   },
   {
     name: "Laboratory Testing",
-    sortOrder: 20,
+    sortOrder: 21,
     category: "lab",
     relatedHints: [],
     defaultDrivers: {},
@@ -253,7 +266,7 @@ const catalog: CatalogSeed[] = [
   },
   {
     name: "Admin support note (8%)",
-    sortOrder: 21,
+    sortOrder: 22,
     category: "admin",
     relatedHints: ["Project Administration"],
     defaultDrivers: { hours: 0 },

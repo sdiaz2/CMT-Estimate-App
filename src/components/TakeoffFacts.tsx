@@ -30,6 +30,7 @@ import {
   suggestMasonryTrips,
   suggestStructuralSteelTrips,
   suggestFloorFlatnessTrips,
+  suggestPostTensionTrips,
   type PierType,
 } from "@/lib/heuristics";
 
@@ -82,6 +83,7 @@ export type TakeoffFactsValues = {
   slabOnGradePourCount?: number | null;
   floorFlatnessSf?: number | null;
   ft2PerTripFloorFlatness?: number | null;
+  postTensionSlabPourCount?: number | null;
 };
 
 /** Shared Takeoff / Project facts fields (used inside a parent <form>). */
@@ -270,6 +272,11 @@ export function TakeoffFactsFields({
     ft2PerTripFloorFlatness: floorFlatnessFt2Divisor,
   });
   const showFloorFlatness = floorFlatnessSuggestion.trips > 0;
+  const postTensionSuggestion = suggestPostTensionTrips({
+    postTensionSlabPourCount: values?.postTensionSlabPourCount,
+    slabOnGradePourCount: values?.slabOnGradePourCount,
+  });
+  const showPostTension = postTensionSuggestion.trips > 0;
   const showBuilding = (buildingSf ?? 0) > 0;
   const showPavement =
     limeTreated ? (pavementSf ?? 0) > 0 : (pavementLf ?? 0) > 0;
@@ -318,8 +325,10 @@ export function TakeoffFactsFields({
           <strong>
             {DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS.toLocaleString()}
           </strong>{" "}
-          ft²; SF falls back to building area). Suggestions never lock — edit
-          freely after Apply.
+          ft²; SF falls back to building area). Post-Tension: Pre-pour 1
+          trip/pour + Tendon stressing 1 trip/pour ={" "}
+          <strong>2 × pours</strong> (dedicated pour count falls back to
+          slab-on-grade). Suggestions never lock — edit freely after Apply.
         </p>
       </div>
 
@@ -1449,6 +1458,60 @@ export function TakeoffFactsFields({
             <p className="mt-1 text-xs text-amber-900/80">
               Applied only to Floor Flatness Testing &amp; Observations when that
               parent is in scope.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          Post-Tension Testing &amp; Observations
+        </p>
+        <p className="mb-3 text-xs text-slate-500">
+          A) Pre-pour Observation: 1 trip per building slab pour. B) Tendon
+          Stressing: 1 trip per building slab pour. Total ={" "}
+          <strong>2 × pour count</strong> when pours &gt; 0. Applied only when
+          this parent is in scope. Dedicated post-tension pour count falls back
+          to slab-on-grade pours (often the same).
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Post-tension slab pour count
+            </span>
+            <input
+              name="postTensionSlabPourCount"
+              type="number"
+              step="1"
+              min="0"
+              defaultValue={
+                values?.postTensionSlabPourCount != null &&
+                values.postTensionSlabPourCount > 0
+                  ? String(values.postTensionSlabPourCount)
+                  : ""
+              }
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="e.g. 3"
+            />
+            <span className="mt-0.5 block text-xs text-slate-500">
+              often same as slab pours; blank uses slab-on-grade pour count
+            </span>
+          </label>
+        </div>
+        {showPostTension && (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            <p>
+              Pre-pour: {postTensionSuggestion.prePourTrips} trips | Tendon
+              stressing: {postTensionSuggestion.stressingTrips} trips | Total:{" "}
+              <strong>{postTensionSuggestion.trips}</strong>
+              {postTensionSuggestion.pourSource === "slabOnGradePourCount"
+                ? " (from slab-on-grade pours)"
+                : ""}
+            </p>
+            <p className="mt-1 text-xs text-amber-900/80">
+              Applied only to Post-Tension Testing &amp; Observations when that
+              parent is in scope. Apply suggestions breaks out Pre-pour and
+              Tendon Stressing line items (each with trips = pour count).
             </p>
           </div>
         )}

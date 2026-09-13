@@ -57,6 +57,7 @@ export type ProjectTakeoff = {
   slabOnGradePourCount?: number | null;
   floorFlatnessSf?: number | null;
   ft2PerTripFloorFlatness?: number | null;
+  postTensionSlabPourCount?: number | null;
 };
 
 /**
@@ -1529,6 +1530,152 @@ export function isFloorFlatnessParent(name: string): boolean {
   );
 }
 
+
+export const POST_TENSION_HOURS_PER_TRIP = 4;
+
+export const POST_TENSION_PARENT_NAME =
+  "Post-Tension Testing & Observations";
+
+/**
+ * Effective post-tension pour count: dedicated postTensionSlabPourCount when set (>0),
+ * else slabOnGradePourCount (often the same as slab pours).
+ */
+export function effectivePostTensionPourCount(
+  takeoff: ProjectTakeoff | null | undefined
+): {
+  pourCount: number;
+  source: "postTensionSlabPourCount" | "slabOnGradePourCount" | "none";
+} {
+  const dedicated = takeoff?.postTensionSlabPourCount;
+  if (
+    dedicated != null &&
+    Number.isFinite(Number(dedicated)) &&
+    Number(dedicated) > 0
+  ) {
+    return {
+      pourCount: Math.floor(Number(dedicated)),
+      source: "postTensionSlabPourCount",
+    };
+  }
+  const fallback = takeoff?.slabOnGradePourCount;
+  if (
+    fallback != null &&
+    Number.isFinite(Number(fallback)) &&
+    Number(fallback) > 0
+  ) {
+    return {
+      pourCount: Math.floor(Number(fallback)),
+      source: "slabOnGradePourCount",
+    };
+  }
+  return { pourCount: 0, source: "none" };
+}
+
+export type PostTensionTripSuggestion = {
+  trips: number;
+  prePourTrips: number;
+  stressingTrips: number;
+  pourCount: number;
+  pourSource: "postTensionSlabPourCount" | "slabOnGradePourCount" | "none";
+};
+
+/**
+ * Post-Tension Testing & Observations — trip rules (only when parent in scope):
+ *
+ * A) Pre-pour Observation: 1 trip per building slab pour
+ *    prePourTrips = postTensionSlabPourCount (fallback: slabOnGradePourCount)
+ * B) Tendon Stressing: 1 trip per building slab pour
+ *    stressingTrips = same pour count
+ * Total trips = A + B = 2 × pourCount when pourCount > 0
+ *
+ * Example: 3 pours → 3 pre-pour + 3 stressing = 6 trips.
+ * Prefer line breakout (Pre-pour vs Tendon Stressing) over one blob.
+ */
+export function suggestPostTensionTrips(
+  takeoff: ProjectTakeoff | null | undefined
+): PostTensionTripSuggestion {
+  const { pourCount, source } = effectivePostTensionPourCount(takeoff);
+  const prePourTrips = pourCount > 0 ? pourCount : 0;
+  const stressingTrips = pourCount > 0 ? pourCount : 0;
+  const trips = pourCount > 0 ? 2 * pourCount : 0;
+  return {
+    trips,
+    prePourTrips,
+    stressingTrips,
+    pourCount,
+    pourSource: source,
+  };
+}
+
+export function hasPostTensionTakeoff(
+  takeoff: ProjectTakeoff | null | undefined
+): boolean {
+  return suggestPostTensionTrips(takeoff).trips > 0;
+}
+
+export function postTensionTripRuleLabel(
+  takeoff: ProjectTakeoff | null | undefined
+): string {
+  const suggestion = suggestPostTensionTrips(takeoff);
+  const sourceNote =
+    suggestion.pourSource === "postTensionSlabPourCount"
+      ? "post-tension pour count"
+      : suggestion.pourSource === "slabOnGradePourCount"
+        ? "slab-on-grade pour count (post-tension pours not set; often the same)"
+        : "pour count";
+
+  if (suggestion.trips <= 0) {
+    return `Post-Tension: Pre-pour 1 trip/pour + Tendon stressing 1 trip/pour = 2 × pours. Enter post-tension slab pour count (falls back to slab-on-grade pours).`;
+  }
+  return `Post-Tension: Pre-pour: ${suggestion.prePourTrips} trips | Tendon stressing: ${suggestion.stressingTrips} trips | Total: ${suggestion.trips} (from ${sourceNote}).`;
+}
+
+export function applyPostTensionTakeoffToDrivers(
+  drivers: Drivers,
+  takeoff: ProjectTakeoff | null | undefined
+): Drivers {
+  const suggestion = suggestPostTensionTrips(takeoff);
+  if (suggestion.trips <= 0) return { ...drivers };
+
+  const trips = suggestion.trips;
+  const hours = trips * POST_TENSION_HOURS_PER_TRIP;
+  const otHours = Math.round(hours * 0.15 * 10) / 10;
+  const source =
+    suggestion.pourSource === "postTensionSlabPourCount"
+      ? "postTensionSlabPourCount"
+      : "slabOnGradePourCount";
+  const notesDefault = `From takeoff: Pre-pour ${suggestion.prePourTrips} + Tendon stressing ${suggestion.stressingTrips} = ${trips} trips (${source}, ${suggestion.pourCount} pours)`;
+
+  return {
+    ...drivers,
+    trips,
+    hours,
+    otHours,
+    days: trips,
+    vehicleTrips: trips,
+    prePourTrips: suggestion.prePourTrips,
+    stressingTrips: suggestion.stressingTrips,
+    notes:
+      typeof drivers.notes === "string" && drivers.notes.trim()
+        ? drivers.notes
+        : notesDefault,
+  };
+}
+
+/** Post-Tension Testing & Observations (not Post-Installed Anchor). */
+export function isPostTensionParent(name: string): boolean {
+  const lower = name.toLowerCase().trim();
+  if (lower.includes("post-installed") || lower.includes("post installed")) {
+    return false;
+  }
+  return (
+    lower === "post-tension testing & observations" ||
+    lower === "post tension testing & observations" ||
+    ((lower.includes("post-tension") || lower.includes("post tension")) &&
+      (lower.includes("testing") || lower.includes("observation")))
+  );
+}
+
 export function suggestFieldLines(
   parentName: string,
   drivers: Drivers,
@@ -1567,6 +1714,11 @@ export function suggestFieldLines(
     hasFloorFlatnessTakeoff(takeoff)
   ) {
     d = applyFloorFlatnessTakeoffToDrivers(drivers, takeoff);
+  } else if (
+    isPostTensionParent(parentName) &&
+    hasPostTensionTakeoff(takeoff)
+  ) {
+    d = applyPostTensionTakeoffToDrivers(drivers, takeoff);
   }
 
   const trips = n(d.trips, 0);
@@ -1663,6 +1815,57 @@ export function suggestFieldLines(
     if (hours > 0 || days > 0) {
       const qty = hours > 0 ? hours : n(d.days, 1);
       lines.push({ description: FLOOR_FLATNESS_PARENT_NAME, quantity: qty, units: hours > 0 ? "hours" : "day", trips, isLab: false });
+    }
+    if (vehicleTrips > 0)
+      lines.push({ description: "Vehicle Charge", quantity: vehicleTrips, units: "each", trips: vehicleTrips, isLab: false });
+  } else if (
+    (name.includes("post-tension") || name.includes("post tension")) &&
+    !name.includes("post-installed") &&
+    !name.includes("post installed")
+  ) {
+    // Prefer Pre-pour vs Tendon Stressing breakout (each with trips = pourCount)
+    const pt = suggestPostTensionTrips(takeoff);
+    let prePourTrips = pt.prePourTrips;
+    let stressingTrips = pt.stressingTrips;
+    if (prePourTrips <= 0 && stressingTrips <= 0 && trips > 0) {
+      // Drivers-only fallback: split total trips evenly when takeoff absent
+      prePourTrips = Math.floor(trips / 2);
+      stressingTrips = trips - prePourTrips;
+    }
+    const preHours =
+      prePourTrips > 0
+        ? prePourTrips * POST_TENSION_HOURS_PER_TRIP
+        : 0;
+    const stressHours =
+      stressingTrips > 0
+        ? stressingTrips * POST_TENSION_HOURS_PER_TRIP
+        : 0;
+    if (prePourTrips > 0) {
+      lines.push({
+        description: "Pre-pour Observation",
+        quantity: preHours > 0 ? preHours : hours / 2,
+        units: "hours",
+        trips: prePourTrips,
+        isLab: false,
+      });
+    }
+    if (stressingTrips > 0) {
+      lines.push({
+        description: "Tendon Stressing",
+        quantity: stressHours > 0 ? stressHours : hours / 2,
+        units: "hours",
+        trips: stressingTrips,
+        isLab: false,
+      });
+    }
+    if (prePourTrips <= 0 && stressingTrips <= 0 && hours > 0) {
+      lines.push({
+        description: POST_TENSION_PARENT_NAME,
+        quantity: hours,
+        units: "hours",
+        trips,
+        isLab: false,
+      });
     }
     if (vehicleTrips > 0)
       lines.push({ description: "Vehicle Charge", quantity: vehicleTrips, units: "each", trips: vehicleTrips, isLab: false });
@@ -1879,6 +2082,7 @@ export function takeoffFromProject(project: {
   slabOnGradePourCount?: number | null;
   floorFlatnessSf?: number | null;
   ft2PerTripFloorFlatness?: number | null;
+  postTensionSlabPourCount?: number | null;
 }): ProjectTakeoff {
   return {
     buildingAreaSf: project.buildingAreaSf ?? null,
@@ -1952,5 +2156,6 @@ export function takeoffFromProject(project: {
     ft2PerTripFloorFlatness:
       project.ft2PerTripFloorFlatness ??
       DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS,
+    postTensionSlabPourCount: project.postTensionSlabPourCount ?? null,
   };
 }

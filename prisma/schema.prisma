@@ -37,13 +37,13 @@ model Project {
   location                    String   @default("")
   notes                       String   @default("")
   docsReceived                String   @default("")
-  /// Building area takeoff (SF) for earthwork trip rule
+  /// Shared building / pad size (SF) — feeds earthwork (moisture+flex), steel, grout, floor flatness fallback
   buildingAreaSf              Float?
   /// Moisture-conditioned subgrade under building
   moistureConditionedSubgrade Boolean  @default(false)
   /// Flexible base cap over moisture-conditioned subgrade
   flexibleBaseCap             Boolean  @default(false)
-  /// SF of building area per earthwork trip (typical range 2700–3000; default mid 2850)
+  /// Earthwork-only SF per trip for building pad (typical 2700–3000; default mid 2850) — not used by steel/grout/flatness
   earthworkSfPerTrip          Float    @default(2850)
   /// Optional note e.g. moisture conditioning depth
   moistureDepthNote           String   @default("")

@@ -295,10 +295,10 @@ export function TakeoffFactsFields({
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
+      <div>
+        <label className="block max-w-md">
           <span className="text-sm font-medium text-umber-soft">
-            Building area (SF)
+            Building / pad size (SF)
           </span>
           <input
             name="buildingAreaSf"
@@ -311,74 +311,91 @@ export function TakeoffFactsFields({
             className="input-soft mt-1.5 w-full text-sm"
             placeholder="e.g. 100000"
           />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-umber-soft">
-            Building SF per trip
-          </span>
-          <input
-            name="earthworkSfPerTrip"
-            type="number"
-            step="any"
-            min="1"
-            defaultValue={String(buildingDivisor)}
-            className="input-soft mt-1.5 w-full text-sm"
-          />
-          <span className="mt-0.5 block text-xs text-umber-faint">
-            typical 2700–3000 (editable)
+          <span className="mt-1 block text-xs text-umber-faint">
+            Used for earthwork (if moisture + flexible base), steel inspections,
+            grout (if baseplates), and floor flatness if you don&apos;t enter a
+            separate area.
           </span>
         </label>
       </div>
 
-      <div className="flex flex-wrap gap-4">
-        <label className="inline-flex items-center gap-2 text-sm text-umber-soft">
-          <input
-            type="checkbox"
-            name="moistureConditionedSubgrade"
-            value="true"
-            defaultChecked={!!values?.moistureConditionedSubgrade}
-            className="rounded accent-terracotta"
-          />
-          Moisture-conditioned subgrade
-        </label>
-        <label className="inline-flex items-center gap-2 text-sm text-umber-soft">
-          <input
-            type="checkbox"
-            name="flexibleBaseCap"
-            value="true"
-            defaultChecked={!!values?.flexibleBaseCap}
-            className="rounded accent-terracotta"
-          />
-          Flexible base cap
-        </label>
-      </div>
+      <details className="takeoff-section" open={compact}>
+        <summary>Earthwork</summary>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className="text-sm font-medium text-umber-soft">
-            Moisture depth note (optional)
-          </span>
-          <input
-            name="moistureDepthNote"
-            type="text"
-            defaultValue={values?.moistureDepthNote ?? ""}
-            className="input-soft mt-1.5 w-full text-sm"
-            placeholder="e.g. 8 in moisture conditioning"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-umber-soft">
-            Flexible base thickness note (optional)
-          </span>
-          <input
-            name="flexibleBaseThicknessNote"
-            type="text"
-            defaultValue={values?.flexibleBaseThicknessNote ?? ""}
-            className="input-soft mt-1.5 w-full text-sm"
-            placeholder="e.g. 6 in flexible base"
-          />
-        </label>
-      </div>
+        <p className="mb-3 text-xs text-umber-faint">
+          Building-pad earthwork trips use the shared{" "}
+          <strong>Building / pad size</strong> above when moisture-conditioned
+          subgrade and a flexible base cap apply. The SF-per-trip control below
+          is the <em>earthwork divisor only</em> — not used by steel, grout, or
+          floor flatness.
+        </p>
+
+        <div className="mb-3 flex flex-wrap gap-4">
+          <label className="inline-flex items-center gap-2 text-sm text-umber-soft">
+            <input
+              type="checkbox"
+              name="moistureConditionedSubgrade"
+              value="true"
+              defaultChecked={!!values?.moistureConditionedSubgrade}
+              className="rounded accent-terracotta"
+            />
+            Moisture-conditioned subgrade
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-umber-soft">
+            <input
+              type="checkbox"
+              name="flexibleBaseCap"
+              value="true"
+              defaultChecked={!!values?.flexibleBaseCap}
+              className="rounded accent-terracotta"
+            />
+            Flexible base cap
+          </label>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-umber-soft">
+              Moisture depth note (optional)
+            </span>
+            <input
+              name="moistureDepthNote"
+              type="text"
+              defaultValue={values?.moistureDepthNote ?? ""}
+              className="input-soft mt-1.5 w-full text-sm"
+              placeholder="e.g. 8 in moisture conditioning"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-umber-soft">
+              Flexible base thickness note (optional)
+            </span>
+            <input
+              name="flexibleBaseThicknessNote"
+              type="text"
+              defaultValue={values?.flexibleBaseThicknessNote ?? ""}
+              className="input-soft mt-1.5 w-full text-sm"
+              placeholder="e.g. 6 in flexible base"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-umber-soft">
+              Earthwork SF per trip (building pad)
+            </span>
+            <input
+              name="earthworkSfPerTrip"
+              type="number"
+              step="any"
+              min="1"
+              defaultValue={String(buildingDivisor)}
+              className="input-soft mt-1.5 w-full text-sm"
+            />
+            <span className="mt-0.5 block text-xs text-umber-faint">
+              Earthwork divisor only — typical 2700–3000 (default 2850)
+            </span>
+          </label>
+        </div>
+      </details>
 
       <details className="takeoff-section" open={compact}>
         <summary>Pavement</summary>
@@ -1470,7 +1487,7 @@ export function TakeoffFactsFields({
         <div className="hint-banner px-4 py-3 text-sm">
           {showBuilding && (
             <p>
-              Building: ceil({Number(buildingSf).toLocaleString()} /{" "}
+              Earthwork (building / pad): ceil({Number(buildingSf).toLocaleString()} /{" "}
               {buildingDivisor.toLocaleString()}) ={" "}
               <strong>{suggestion.buildingTrips} trips</strong>
             </p>

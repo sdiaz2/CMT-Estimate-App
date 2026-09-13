@@ -109,7 +109,7 @@ function ceilTrips(amount: number, divisor: number): number {
 /**
  * Earthwork Testing & Observations trip rules:
  *
- * Building: ceil(buildingSF / earthworkSfPerTrip) — default 2850 (2700–3000).
+ * Building / pad (shared SF; earthwork divisor only): ceil(buildingSF / earthworkSfPerTrip) — default 2850 (2700–3000).
  *
  * Pavement (exactly one):
  *   lime on  → ceil(pavementSF / pavementSfPerTrip) — default 27500 (25000–30000)
@@ -250,9 +250,9 @@ export function earthworkTripRuleLabels(
   } = {};
 
   if (buildingSf > 0) {
-    out.building = `Building: 1 trip / ${buildingDivisor.toLocaleString()} SF → ${suggestion.buildingTrips} trips from ${buildingSf.toLocaleString()} SF (typical 2,700–3,000)`;
+    out.building = `Earthwork (building / pad): 1 trip / ${buildingDivisor.toLocaleString()} SF → ${suggestion.buildingTrips} trips from ${buildingSf.toLocaleString()} SF (typical 2,700–3,000)`;
   } else {
-    out.building = `Building: 1 trip / ${buildingDivisor.toLocaleString()} SF (typical 2,700–3,000). Enter building area to suggest trips.`;
+    out.building = `Earthwork (building / pad): 1 trip / ${buildingDivisor.toLocaleString()} SF (typical 2,700–3,000). Enter Building / pad size to suggest trips.`;
   }
 
   if (limeTreated) {

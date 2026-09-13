@@ -1,9 +1,29 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "CMT Estimate App",
   description: "CMET / materials testing fee estimating MVP",
+  applicationName: "CMT Estimate",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CMT Estimate",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#6B4F3A",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -14,6 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen antialiased text-umber">
+        <ServiceWorkerRegister />
         <header className="no-print bg-paper/80 backdrop-blur-md">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
             <a

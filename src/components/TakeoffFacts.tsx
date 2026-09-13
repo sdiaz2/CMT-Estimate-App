@@ -325,10 +325,10 @@ export function TakeoffFactsFields({
           <strong>
             {DEFAULT_FT2_PER_TRIP_FLOOR_FLATNESS.toLocaleString()}
           </strong>{" "}
-          ft²; SF falls back to building area). Post-Tension: Pre-pour 1
-          trip/pour + Tendon stressing 1 trip/pour ={" "}
-          <strong>2 × pours</strong> (dedicated pour count falls back to
-          slab-on-grade). Suggestions never lock — edit freely after Apply.
+          ft²; SF falls back to building area). Post-Tension:{" "}
+          <strong>2 × pours</strong> total trips (dedicated pour count falls
+          back to slab-on-grade). Suggestions never lock — edit freely after
+          Apply.
         </p>
       </div>
 
@@ -1468,11 +1468,10 @@ export function TakeoffFactsFields({
           Post-Tension Testing &amp; Observations
         </p>
         <p className="mb-3 text-xs text-slate-500">
-          A) Pre-pour Observation: 1 trip per building slab pour. B) Tendon
-          Stressing: 1 trip per building slab pour. Total ={" "}
-          <strong>2 × pour count</strong> when pours &gt; 0. Applied only when
-          this parent is in scope. Dedicated post-tension pour count falls back
-          to slab-on-grade pours (often the same).
+          Total trips = <strong>2 × pour count</strong> when pours &gt; 0
+          (covers one pre-pour and one tendon stressing visit per pour). Applied
+          only when this parent is in scope. Dedicated post-tension pour count
+          falls back to slab-on-grade pours (often the same).
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
@@ -1501,17 +1500,16 @@ export function TakeoffFactsFields({
         {showPostTension && (
           <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
             <p>
-              Pre-pour: {postTensionSuggestion.prePourTrips} trips | Tendon
-              stressing: {postTensionSuggestion.stressingTrips} trips | Total:{" "}
-              <strong>{postTensionSuggestion.trips}</strong>
+              Suggested: <strong>{postTensionSuggestion.trips}</strong> trips (2
+              × {postTensionSuggestion.pourCount} pours)
               {postTensionSuggestion.pourSource === "slabOnGradePourCount"
                 ? " (from slab-on-grade pours)"
                 : ""}
             </p>
             <p className="mt-1 text-xs text-amber-900/80">
               Applied only to Post-Tension Testing &amp; Observations when that
-              parent is in scope. Apply suggestions breaks out Pre-pour and
-              Tendon Stressing line items (each with trips = pour count).
+              parent is in scope. Apply suggestions sets one hours line (hours ×
+              trips) plus Vehicle — not separate pre-pour / stressing rows.
             </p>
           </div>
         )}

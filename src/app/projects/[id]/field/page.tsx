@@ -351,10 +351,8 @@ export default async function FieldPage({
             {postTensionTakeoffApplies && (
               <p className="text-xs text-slate-600">
                 Post-Tension preview:{" "}
-                <strong>{postTensionSuggestion.trips} trips</strong> (Pre-pour:{" "}
-                {postTensionSuggestion.prePourTrips} | Tendon stressing:{" "}
-                {postTensionSuggestion.stressingTrips} | Total:{" "}
-                {postTensionSuggestion.trips})
+                <strong>{postTensionSuggestion.trips} trips</strong> (2 ×{" "}
+                {postTensionSuggestion.pourCount} pours)
                 {postTensionSuggestion.pourSource === "slabOnGradePourCount"
                   ? " (from slab-on-grade pours)"
                   : ""}
@@ -672,20 +670,18 @@ export default async function FieldPage({
                     <p className="font-medium">{postTensionLabel}</p>
                     {postTensionTakeoffApplies && (
                       <p className="mt-1 text-sm">
-                        Pre-pour: {postTensionSuggestion.prePourTrips} trips |
-                        Tendon stressing:{" "}
-                        {postTensionSuggestion.stressingTrips} trips | Total:{" "}
-                        <strong>{postTensionSuggestion.trips}</strong>
+                        Suggested:{" "}
+                        <strong>{postTensionSuggestion.trips}</strong> trips (2
+                        × {postTensionSuggestion.pourCount} pours)
                       </p>
                     )}
                     <p className="mt-1 text-xs text-amber-900/80">
-                      A) Pre-pour Observation: 1 trip per building slab pour. B)
-                      Tendon Stressing: 1 trip per pour. Total = 2 × pours.
-                      Dedicated pour count falls back to slab-on-grade (often the
-                      same). Apply suggestions sets Trips and breaks out Pre-pour
-                      vs Tendon Stressing lines (each with trips = pour count),
-                      then cascades hours (~4 hr/trip) and Vehicle. Numbers stay
-                      editable.
+                      Trips = 2 × pours (one pre-pour + one tendon stressing
+                      visit per pour). Dedicated pour count falls back to
+                      slab-on-grade (often the same). Apply suggestions sets
+                      Trips and one Post-Tension Testing &amp; Observations hours
+                      line (~4 hr/trip) plus Vehicle — not separate pre-pour /
+                      stressing rows. Numbers stay editable.
                     </p>
                   </div>
                 )}
@@ -810,7 +806,7 @@ export default async function FieldPage({
         <p className="mt-4 text-xs text-slate-500">
           Tip: for Post-Tension Testing &amp; Observations, enter post-tension
           slab pour count (or rely on slab-on-grade pours). Suggested trips = 2 ×
-          pours (Pre-pour + Tendon stressing).
+          pours.
         </p>
       )}
     </div>

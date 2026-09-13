@@ -163,9 +163,8 @@ const catalog: CatalogSeed[] = [
     relatedHints: ["Concrete Testing & Reinforcing Steel Observations", "Laboratory Testing"],
     defaultDrivers: { trips: 6, hours: 24, otHours: 3.6, vehicleTrips: 6 },
     templates: [
-      { description: "Pre-pour Observation", units: "hours", qtyHint: "pre-pour trips × ~4 hr", sortOrder: 1 },
-      { description: "Tendon Stressing", units: "hours", qtyHint: "stressing trips × ~4 hr", sortOrder: 2 },
-      { description: "Vehicle Charge", units: "each", includesVehicle: true, qtyHint: "vehicleTrips (= 2 × pours)", sortOrder: 3 },
+      { description: "Post-Tension Testing & Observations", units: "hours", qtyHint: "hours (trips × ~4 hr; trips = 2 × pours)", sortOrder: 1 },
+      { description: "Vehicle Charge", units: "each", includesVehicle: true, qtyHint: "vehicleTrips", sortOrder: 2 },
     ],
   },
   {

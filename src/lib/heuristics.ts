@@ -1573,8 +1573,6 @@ export function effectivePostTensionPourCount(
 
 export type PostTensionTripSuggestion = {
   trips: number;
-  prePourTrips: number;
-  stressingTrips: number;
   pourCount: number;
   pourSource: "postTensionSlabPourCount" | "slabOnGradePourCount" | "none";
 };
@@ -1582,26 +1580,21 @@ export type PostTensionTripSuggestion = {
 /**
  * Post-Tension Testing & Observations — trip rules (only when parent in scope):
  *
- * A) Pre-pour Observation: 1 trip per building slab pour
- *    prePourTrips = postTensionSlabPourCount (fallback: slabOnGradePourCount)
- * B) Tendon Stressing: 1 trip per building slab pour
- *    stressingTrips = same pour count
- * Total trips = A + B = 2 × pourCount when pourCount > 0
+ * Total trips = 2 × pourCount when pourCount > 0
+ * (A+B: one pre-pour visit + one tendon stressing visit per pour — used only
+ * to size trips; Apply suggestions keeps a single parent hours line + Vehicle,
+ * not separate Pre-pour / Tendon Stressing rows.)
  *
- * Example: 3 pours → 3 pre-pour + 3 stressing = 6 trips.
- * Prefer line breakout (Pre-pour vs Tendon Stressing) over one blob.
+ * pourCount = postTensionSlabPourCount (fallback: slabOnGradePourCount)
+ * Example: 3 pours → 6 trips.
  */
 export function suggestPostTensionTrips(
   takeoff: ProjectTakeoff | null | undefined
 ): PostTensionTripSuggestion {
   const { pourCount, source } = effectivePostTensionPourCount(takeoff);
-  const prePourTrips = pourCount > 0 ? pourCount : 0;
-  const stressingTrips = pourCount > 0 ? pourCount : 0;
   const trips = pourCount > 0 ? 2 * pourCount : 0;
   return {
     trips,
-    prePourTrips,
-    stressingTrips,
     pourCount,
     pourSource: source,
   };
@@ -1625,9 +1618,9 @@ export function postTensionTripRuleLabel(
         : "pour count";
 
   if (suggestion.trips <= 0) {
-    return `Post-Tension: Pre-pour 1 trip/pour + Tendon stressing 1 trip/pour = 2 × pours. Enter post-tension slab pour count (falls back to slab-on-grade pours).`;
+    return `Post-Tension: trips = 2 × pours (pre-pour + tendon stressing visits). Enter post-tension slab pour count (falls back to slab-on-grade pours).`;
   }
-  return `Post-Tension: Pre-pour: ${suggestion.prePourTrips} trips | Tendon stressing: ${suggestion.stressingTrips} trips | Total: ${suggestion.trips} (from ${sourceNote}).`;
+  return `Post-Tension: ${suggestion.trips} trips (2 × ${suggestion.pourCount} pours from ${sourceNote}).`;
 }
 
 export function applyPostTensionTakeoffToDrivers(
@@ -1644,7 +1637,7 @@ export function applyPostTensionTakeoffToDrivers(
     suggestion.pourSource === "postTensionSlabPourCount"
       ? "postTensionSlabPourCount"
       : "slabOnGradePourCount";
-  const notesDefault = `From takeoff: Pre-pour ${suggestion.prePourTrips} + Tendon stressing ${suggestion.stressingTrips} = ${trips} trips (${source}, ${suggestion.pourCount} pours)`;
+  const notesDefault = `From takeoff: 2 × ${suggestion.pourCount} pours = ${trips} trips (${source})`;
 
   return {
     ...drivers,
@@ -1653,8 +1646,6 @@ export function applyPostTensionTakeoffToDrivers(
     otHours,
     days: trips,
     vehicleTrips: trips,
-    prePourTrips: suggestion.prePourTrips,
-    stressingTrips: suggestion.stressingTrips,
     notes:
       typeof drivers.notes === "string" && drivers.notes.trim()
         ? drivers.notes
@@ -1823,42 +1814,8 @@ export function suggestFieldLines(
     !name.includes("post-installed") &&
     !name.includes("post installed")
   ) {
-    // Prefer Pre-pour vs Tendon Stressing breakout (each with trips = pourCount)
-    const pt = suggestPostTensionTrips(takeoff);
-    let prePourTrips = pt.prePourTrips;
-    let stressingTrips = pt.stressingTrips;
-    if (prePourTrips <= 0 && stressingTrips <= 0 && trips > 0) {
-      // Drivers-only fallback: split total trips evenly when takeoff absent
-      prePourTrips = Math.floor(trips / 2);
-      stressingTrips = trips - prePourTrips;
-    }
-    const preHours =
-      prePourTrips > 0
-        ? prePourTrips * POST_TENSION_HOURS_PER_TRIP
-        : 0;
-    const stressHours =
-      stressingTrips > 0
-        ? stressingTrips * POST_TENSION_HOURS_PER_TRIP
-        : 0;
-    if (prePourTrips > 0) {
-      lines.push({
-        description: "Pre-pour Observation",
-        quantity: preHours > 0 ? preHours : hours / 2,
-        units: "hours",
-        trips: prePourTrips,
-        isLab: false,
-      });
-    }
-    if (stressingTrips > 0) {
-      lines.push({
-        description: "Tendon Stressing",
-        quantity: stressHours > 0 ? stressHours : hours / 2,
-        units: "hours",
-        trips: stressingTrips,
-        isLab: false,
-      });
-    }
-    if (prePourTrips <= 0 && stressingTrips <= 0 && hours > 0) {
+    // Single parent hours × trips line + Vehicle (no Pre-pour / Tendon breakout)
+    if (hours > 0)
       lines.push({
         description: POST_TENSION_PARENT_NAME,
         quantity: hours,
@@ -1866,7 +1823,6 @@ export function suggestFieldLines(
         trips,
         isLab: false,
       });
-    }
     if (vehicleTrips > 0)
       lines.push({ description: "Vehicle Charge", quantity: vehicleTrips, units: "each", trips: vehicleTrips, isLab: false });
   } else if (name.includes("project administration") || name.includes("admin support")) {

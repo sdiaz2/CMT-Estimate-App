@@ -355,15 +355,11 @@ Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appe
 
 ### Post-Tension Testing & Observations — trip suggestions
 
-Parent: **Post-Tension Testing & Observations** (seed catalog). Apply suggestions sets **Trips** and cascades hours (~4 hr/trip) and Vehicle — only when this parent is in project scope. Prefer line breakout **Pre-pour Observation** and **Tendon Stressing** (each with trips = pour count) rather than one blob so the worksheet shows both.
+Parent: **Post-Tension Testing & Observations** (seed catalog). Apply suggestions sets **Trips** and cascades hours (~4 hr/trip) and Vehicle — only when this parent is in project scope. Worksheet lines match other single-parent field tasks: one **Post-Tension Testing & Observations** hours line (hours × trips) plus **Vehicle Charge** — not separate Pre-pour / Tendon Stressing rows.
 
-**Rules A + B — 2 × pours**
+**Trip rule — 2 × pours**
 
-| Rule | Line | Trips |
-|------|------|--------|
-| A | Pre-pour Observation | 1 trip per building slab pour (`prePourTrips = pourCount`) |
-| B | Tendon Stressing | 1 trip per building slab pour (`stressingTrips = pourCount`) |
-| Total | | `2 × pourCount` when pourCount > 0 |
+Total trips = `2 × pourCount` when pourCount > 0 (A+B sizing: one pre-pour visit + one tendon stressing visit per pour; used only to size trips).
 
 | Input | Notes |
 |-------|--------|
@@ -376,14 +372,12 @@ Parent: **Post-Tension Testing & Observations** (seed catalog). Apply suggestion
 pourCount = postTensionSlabPourCount > 0
   ? postTensionSlabPourCount
   : (slabOnGradePourCount > 0 ? slabOnGradePourCount : 0)
-prePourTrips = pourCount
-stressingTrips = pourCount
 trips = pourCount > 0 ? 2 * pourCount : 0
 ```
 
-**Example:** 3 pours → 3 pre-pour + 3 stressing = **6** trips.
+**Example:** 3 pours → **6** trips.
 
-Amber UI shows: `Pre-pour: N trips | Tendon stressing: N trips | Total: 2N`.
+Amber UI shows: `Suggested: 2N trips (2 × N pours)`.
 
 Takeoff fields live on Project facts (New / Setup / Field). Amber rule copy appears on the Field takeoff panel and near the Post-Tension parent.
 

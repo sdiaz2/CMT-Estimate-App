@@ -1,24 +1,30 @@
 # CMT Estimate App
 
-CMET / materials testing fee estimating MVP (Next.js App Router + TypeScript + Tailwind + SQLite/Prisma).
+CMET / materials testing fee estimating MVP (Next.js App Router + TypeScript + Tailwind + Prisma/PostgreSQL).
 
 ## How to run
 
 ```
 npm install
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 npm run db:seed
 npm run dev
 ```
 
 Open http://localhost:3000
 
-SQLite file: prisma/dev.db via DATABASE_URL in .env
+Postgres via DATABASE_URL in .env (see .env.example). SQLite is no longer supported.
 
 ## Scripts (package.json)
 
 - npm run dev / build / start
-- npm run db:migrate / db:seed / db:push / db:reset
+- npm run db:migrate / db:deploy / db:seed / db:push / db:reset
+
+## Vercel + Postgres
+
+Set DATABASE_URL from Neon or Vercel Postgres free tier, then deploy.
+After first deploy, run the seed script against production DATABASE_URL.
+SQLite unsupported; prefer a fresh Postgres database.
 
 ## Workflow
 

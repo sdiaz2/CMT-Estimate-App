@@ -43,7 +43,6 @@ export function TripPreview({
         {total}
       </p>
       <p className="text-sm text-muted">from takeoff rules · 4 hours each</p>
-      <p className="text-sm text-muted">from takeoff rules · 4 hours each</p>
       <ul className="mt-4 space-y-2">
         {rows.map((r) => (
           <li key={r.label} className="flex justify-between text-sm">

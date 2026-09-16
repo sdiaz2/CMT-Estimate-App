@@ -1,3 +1,1 @@
-# CMT Estimate rebuild
-
-This branch replaces the Next.js app with the rebuilt PWA.
+This is the rebuilt CMT Estimate (on-device, no Prisma). Live at cmtestimate20.vercel.app.

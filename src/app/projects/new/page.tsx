@@ -1,78 +1,74 @@
-import { createProject } from "@/lib/actions";
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
+import { AppShell, Card, Field, PageLead } from "@/components/app-shell";
+import { Button } from "@/components/ui/button";
+import { Input, Textarea } from "@/components/ui/input";
+import { useEstimateStore } from "@/lib/store";
 
-export default function NewProjectPage() {
+function NewProject() {
+  const createProject = useEstimateStore((s) => s.createProject);
+  const router = useRouter();
+  const [name, setName] = useState("");
+
+  function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const id = createProject({
+      name: String(fd.get("name") || ""),
+      location: String(fd.get("location") || ""),
+      docsReceived: String(fd.get("docsReceived") || ""),
+      notes: String(fd.get("notes") || ""),
+    });
+    router.push(`/projects/${id}/scope`);
+  }
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-8">
-        <Link
-          href="/"
-          className="text-sm text-umber-faint hover:text-umber transition-colors"
-        >
-          ← All projects
-        </Link>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-umber">
-          New estimate
-        </h1>
-        <p className="page-lead mt-2">
-          Name the job and note what docs you have. Plan quantities come after
-          you pick scope.
-        </p>
-      </div>
-
-      <form action={createProject} className="card-soft space-y-5 p-8">
-        <label className="block">
-          <span className="text-sm font-medium text-umber-soft">Project name</span>
-          <input
-            name="name"
-            required
-            className="input-soft mt-1.5 w-full text-sm"
-            placeholder="e.g. Riverside Elementary Expansion"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-umber-soft">Location</span>
-          <input
-            name="location"
-            className="input-soft mt-1.5 w-full text-sm"
-            placeholder="City, State"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-umber-soft">
-            Docs you received
-          </span>
-          <textarea
-            name="docsReceived"
-            rows={3}
-            className="input-soft rounded-block mt-1.5 w-full text-sm"
-            placeholder="Plans dated…, specs sections…, geotech report…"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-umber-soft">Notes</span>
-          <textarea
-            name="notes"
-            rows={3}
-            className="input-soft rounded-block mt-1.5 w-full text-sm"
-            placeholder="Schedule assumptions, exclusions, etc."
-          />
-        </label>
-
-        <p className="text-xs text-umber-faint">
-          Tip: enter plan quantities on the <strong>Takeoffs</strong> step after
-          you pick scope.
-        </p>
-
-        <div className="flex flex-wrap justify-end gap-2.5 pt-2">
-          <Link href="/" className="btn-secondary text-sm">
-            Cancel
-          </Link>
-          <button type="submit" className="btn-primary text-sm">
-            Save and pick scope →
-          </button>
-        </div>
-      </form>
-    </div>
+    <AppShell>
+      <PageLead title="New estimate">
+        Name the job and note what docs you have. Plan quantities come after you
+        pick scope.
+      </PageLead>
+      <Card className="mx-auto max-w-2xl">
+        <form onSubmit={onSubmit} className="space-y-5">
+          <Field label="Project name">
+            <Input
+              name="name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Riverside Elementary Expansion"
+            />
+          </Field>
+          <Field label="Location">
+            <Input name="location" placeholder="City, State" />
+          </Field>
+          <Field label="Docs you received">
+            <Textarea
+              name="docsReceived"
+              rows={3}
+              placeholder="Plans dated…, specs sections…, geotech report…"
+            />
+          </Field>
+          <Field label="Notes">
+            <Textarea
+              name="notes"
+              rows={3}
+              placeholder="Schedule assumptions, exclusions, etc."
+            />
+          </Field>
+          <div className="flex flex-wrap justify-end gap-2 pt-2">
+            <Button variant="secondary" asChild>
+              <Link href="/">Cancel</Link>
+            </Button>
+            <Button type="submit">Save and pick scope</Button>
+          </div>
+        </form>
+      </Card>
+    </AppShell>
   );
 }
+
+export default NewProject;

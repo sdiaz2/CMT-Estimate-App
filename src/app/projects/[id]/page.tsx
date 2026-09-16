@@ -1,91 +1,59 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { updateProject } from "@/lib/actions";
-import { StepNav } from "@/components/StepNav";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useParams } from "next/navigation";
+import { AppShell, Card, Field, PageLead } from "@/components/app-shell";
+import { StepFooter, StepNav } from "@/components/step-nav";
+import { Input, Textarea } from "@/components/ui/input";
+import { stepHref, useEstimateStore, useProject } from "@/lib/store";
 
-export default async function ProjectSetupPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const project = await prisma.project.findUnique({ where: { id } });
-  if (!project) notFound();
+function SetupPage() {
+  const { id } = useParams<{ id: string }>();
+  const project = useProject(id);
+  const patchProject = useEstimateStore((s) => s.patchProject);
+  if (!project) return null;
 
   return (
-    <div>
-      <StepNav projectId={id} current="setup" />
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight text-umber">{project.name}</h1>
-        <p className="page-lead mt-2">
-          Confirm the job details. Plan quantities are entered after scope on
-          the Takeoffs step.
-        </p>
-      </div>
-
-      <form
-        action={updateProject.bind(null, id)}
-        className="card-soft mx-auto max-w-2xl space-y-5 p-8"
-      >
-        <label className="block">
-          <span className="text-sm font-medium text-umber-soft">Project name</span>
-          <input
-            name="name"
-            required
-            defaultValue={project.name}
-            className="input-soft mt-1.5 w-full text-sm"
+    <AppShell>
+      <StepNav project={project} current="setup" />
+      <PageLead title={project.name}>
+        Confirm the job details. Plan quantities are entered after scope.
+      </PageLead>
+      <Card className="mx-auto max-w-2xl space-y-5">
+        <Field label="Project name">
+          <Input
+            value={project.name}
+            onChange={(e) => patchProject(id, { name: e.target.value })}
           />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-umber-soft">Location</span>
-          <input
-            name="location"
-            defaultValue={project.location}
-            className="input-soft mt-1.5 w-full text-sm"
+        </Field>
+        <Field label="Location">
+          <Input
+            value={project.location}
+            onChange={(e) => patchProject(id, { location: e.target.value })}
           />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-umber-soft">Docs received</span>
-          <textarea
-            name="docsReceived"
+        </Field>
+        <Field label="Docs received">
+          <Textarea
             rows={3}
-            defaultValue={project.docsReceived}
-            className="input-soft rounded-block mt-1.5 w-full text-sm"
+            value={project.docsReceived}
+            onChange={(e) => patchProject(id, { docsReceived: e.target.value })}
           />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-umber-soft">Notes</span>
-          <textarea
-            name="notes"
+        </Field>
+        <Field label="Notes">
+          <Textarea
             rows={3}
-            defaultValue={project.notes}
-            className="input-soft rounded-block mt-1.5 w-full text-sm"
+            value={project.notes}
+            onChange={(e) => patchProject(id, { notes: e.target.value })}
           />
-        </label>
-
-        <p className="text-xs text-umber-faint">
-          Enter quantities after scope —{" "}
-          <Link
-            href={`/projects/${id}/takeoffs`}
-            className="font-medium text-terracotta hover:text-terracotta-hover"
-          >
-            open Takeoffs
-          </Link>
-          .
-        </p>
-
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            className="btn-primary px-5 py-2.5 text-sm"
-          >
-            Save project details
-          </button>
-        </div>
-      </form>
-    </div>
+        </Field>
+        <p className="text-xs text-subtle">Saved automatically on this device.</p>
+      </Card>
+      <StepFooter
+        back={{ to: "/", label: "All projects" }}
+        next={{ to: stepHref(id, "scope"), label: "Pick scope" }}
+        nextLabel="Continue to scope"
+      />
+    </AppShell>
   );
 }
+
+export default SetupPage;

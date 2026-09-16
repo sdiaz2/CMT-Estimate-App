@@ -1,84 +1,86 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { applyLabSuggestions } from "@/lib/actions";
-import { StepNav } from "@/components/StepNav";
-import { LineItemsEditor } from "@/components/LineItemsEditor";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useParams } from "next/navigation";
+import { RotateCcw } from "lucide-react";
+import { AppShell, Card, PageLead } from "@/components/app-shell";
+import { LineEditor } from "@/components/line-editor";
+import { StepFooter, StepNav } from "@/components/step-nav";
+import { Button } from "@/components/ui/button";
+import { labLinesFor, stepHref, useEstimateStore, useProject } from "@/lib/store";
 
-export default async function LabPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const project = await prisma.project.findUnique({
-    where: { id },
-    include: {
-      parents: {
-        include: { catalog: true, lineItems: { orderBy: { sortOrder: "asc" } } },
-        orderBy: { sortOrder: "asc" },
-      },
-    },
-  });
-  if (!project) notFound();
+function LabPage() {
+  const { id } = useParams<{ id: string }>();
+  const project = useProject(id);
+  const setLabLines = useEstimateStore((s) => s.setLabLines);
+  const resetLab = useEstimateStore((s) => s.resetLab);
+  const toggleScope = useEstimateStore((s) => s.toggleScope);
+  if (!project) return null;
 
-  let labParent = project.parents.find((p) => p.catalog.name === "Laboratory Testing");
+  const labOn = project.scoped.includes("Laboratory Testing");
+  const lines = labLinesFor(project);
 
   return (
-    <div>
-      <StepNav projectId={id} current="lab" />
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-umber">
-            {project.name}
-          </h1>
-          <p className="page-lead mt-2">
-            Lab tests are suggested from your field trips. Review the list, then
-            continue to the worksheet when it looks right.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2.5">
-          <form action={applyLabSuggestions.bind(null, id)}>
-            <button
-              type="submit"
-              className={labParent ? "btn-secondary text-sm" : "btn-primary text-sm"}
-            >
-              {labParent ? "Refresh lab suggestions" : "Suggest lab tests"}
-            </button>
-          </form>
-        </div>
+    <AppShell>
+      <StepNav project={project} current="lab" />
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <PageLead title="Laboratory tests">
+          Suggested from field trips and samples: concrete cylinders, grout,
+          mortar, soils classification, asphalt density.
+        </PageLead>
+        {project.labTouched ? (
+          <Button type="button" variant="secondary" onClick={() => resetLab(id)}>
+            <RotateCcw />
+            Reset suggestions
+          </Button>
+        ) : null}
       </div>
 
-      {!labParent ? (
-        <div className="empty-state">
-          <p className="text-lg font-medium text-umber">No lab lines yet</p>
-          <p className="mt-2 text-umber-muted">
-            Press <strong className="text-umber">Suggest lab tests</strong> to
-            build lines from your field trips, or add Laboratory Testing on{" "}
-            <Link
-              href={`/projects/${id}/scope`}
-              className="font-medium text-terracotta hover:text-terracotta-hover"
-            >
-              Scope
-            </Link>
-            .
+      {!labOn ? (
+        <Card className="mb-5">
+          <p className="text-sm text-muted">
+            Laboratory Testing is not in scope. Suggestions still show so you
+            can add the parent if they look right.
           </p>
-        </div>
-      ) : (
-        <section className="card-soft p-6">
-          <h2 className="mb-5 text-lg font-semibold text-umber">
-            {labParent.catalog.name}
-          </h2>
-          <LineItemsEditor
-            projectId={id}
-            projectParentId={labParent.id}
-            lines={labParent.lineItems}
-            isLab
+          <Button
+            type="button"
+            className="mt-3"
+            size="sm"
+            onClick={() => toggleScope(id, "Laboratory Testing")}
+          >
+            Add Laboratory Testing
+          </Button>
+        </Card>
+      ) : null}
+
+      <Card>
+        {lines.length === 0 ? (
+          <p className="text-sm text-muted">
+            No lab tests suggested yet. Add earthwork, concrete, masonry, grout,
+            or asphalt on Scope and fill trips.
+          </p>
+        ) : (
+          <LineEditor
+            lines={lines}
+            allowLab
+            onChange={(next) => setLabLines(id, next)}
           />
-        </section>
-      )}
-    </div>
+        )}
+        {project.labTouched ? (
+          <p className="mt-3 text-xs text-hint">Edited — no longer auto-updating.</p>
+        ) : (
+          <p className="mt-3 text-xs text-subtle">
+            Auto-updating from field drivers until you edit a line.
+          </p>
+        )}
+      </Card>
+
+      <StepFooter
+        back={{ to: stepHref(id, "trips"), label: "Back to trips" }}
+        next={{ to: stepHref(id, "worksheet") }}
+        nextLabel="Open worksheet"
+      />
+    </AppShell>
   );
 }
+
+export default LabPage;

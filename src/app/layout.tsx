@@ -1,10 +1,24 @@
 import type { Metadata, Viewport } from "next";
-import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { Fraunces, Source_Sans_3 } from "next/font/google";
+import { PwaRegister } from "@/components/pwa-install";
 import "./globals.css";
 
+const display = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const sans = Source_Sans_3({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "CMT Estimate App",
-  description: "CMET / materials testing fee estimating MVP",
+  title: "CMT Estimate",
+  description:
+    "Rebuilt materials-testing fee estimator. Walk a job from scope to a Pricing Tool worksheet.",
   applicationName: "CMT Estimate",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -14,46 +28,27 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/icons/icon-192.png", sizes: "192x192" }],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#6B4F3A",
+  themeColor: "#B86545",
   colorScheme: "light",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className="min-h-screen antialiased text-umber">
-        <ServiceWorkerRegister />
-        <header className="no-print bg-paper/80 backdrop-blur-md">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-            <a
-              href="/"
-              className="text-xl font-semibold tracking-tight text-umber"
-            >
-              CMT Estimate
-            </a>
-            <nav className="flex items-center gap-4 text-sm text-umber-muted">
-              <a href="/" className="hover:text-umber transition-colors">
-                Projects
-              </a>
-              <span className="rounded-full bg-sage-soft px-3 py-1 text-xs font-medium text-olive">
-                v1 MVP
-              </span>
-            </nav>
-          </div>
-        </header>
-        <main className="mx-auto max-w-7xl px-6 py-10">{children}</main>
+    <html lang="en" className={`${display.variable} ${sans.variable} antialiased`}>
+      <body>
+        <PwaRegister />
+        {children}
       </body>
     </html>
   );

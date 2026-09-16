@@ -3,7 +3,8 @@
 import { useParams } from "next/navigation";
 import { AppShell, PageLead } from "@/components/app-shell";
 import { StepFooter, StepNav } from "@/components/step-nav";
-import { TakeoffForm, TripPreview } from "@/components/takeoff-form";
+import { TakeoffForm } from "@/components/takeoff-form";
+import { TripPreview } from "@/components/trip-preview";
 import { stepHref, useEstimateStore, useProject } from "@/lib/store";
 
 function TakeoffsPage() {
